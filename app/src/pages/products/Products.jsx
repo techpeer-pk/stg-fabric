@@ -5,12 +5,15 @@ import FirestoreService from '../../firebase/firestore-multi-branch'
 import useAuthStore from '../../store/authStore-multi-branch'
 import { handleError, showSuccess } from '../../utils/errorHandler'
 import { serverTimestamp } from 'firebase/firestore'
+import { Search, X, ChevronsUpDown, ChevronUp, ChevronDown, Plus } from 'lucide-react'
 
 const ROWS_OPTIONS = [10, 25, 50, 100]
 
 function SortIcon({ col, sortCol, sortDir }) {
-    if (sortCol !== col) return <span className="ml-1 opacity-25">↕</span>
-    return <span className="ml-1 text-blue-600">{sortDir === 'asc' ? '↑' : '↓'}</span>
+    if (sortCol !== col) return <ChevronsUpDown size={12} className="ml-1 opacity-30 inline" />
+    return sortDir === 'asc'
+        ? <ChevronUp size={12} className="ml-1 text-blue-600 inline" />
+        : <ChevronDown size={12} className="ml-1 text-blue-600 inline" />
 }
 
 function Products() {
@@ -252,9 +255,9 @@ function Products() {
                 <p className="text-gray-500 dark:text-gray-400 font-medium">{products.length} products total</p>
                 <button
                     onClick={() => setShowForm(!showForm)}
-                    className="bg-blue-600 text-white px-6 py-2 rounded-xl font-bold hover:bg-blue-700 transition shadow-lg shadow-blue-500/20"
+                    className="bg-blue-600 text-white px-5 py-2 rounded-xl font-bold hover:bg-blue-700 transition shadow-lg shadow-blue-500/20 flex items-center gap-2"
                 >
-                    + Add Product
+                    <Plus size={16} /> Add Product
                 </button>
             </div>
 
@@ -511,7 +514,7 @@ function Products() {
                 {/* Controls: Search + Rows per page */}
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 border-b dark:border-gray-800">
                     <div className="relative w-full sm:max-w-sm">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none">🔍</span>
+                        <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
                         <input
                             type="text"
                             value={search}
@@ -522,8 +525,8 @@ function Products() {
                         {search && (
                             <button
                                 onClick={() => { setSearch(''); setPage(1) }}
-                                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-xs"
-                            >✕</button>
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                            ><X size={13} /></button>
                         )}
                     </div>
                     <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 font-bold flex-shrink-0">

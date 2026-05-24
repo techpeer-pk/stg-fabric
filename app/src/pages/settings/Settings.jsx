@@ -3,6 +3,7 @@ import Layout from '../../components/layout/Layout'
 import useAuthStore from '../../store/authStore-multi-branch'
 import FirestoreService from '../../firebase/firestore-multi-branch'
 import { handleError, showSuccess } from '../../utils/errorHandler'
+import { Building2, DollarSign, Star, Receipt, Bell, CheckCircle2, Save } from 'lucide-react'
 
 function Settings() {
     const { businessId, branchId } = useAuthStore()
@@ -113,7 +114,7 @@ function Settings() {
 
                 {/* Business Info */}
                 <div className="bg-white rounded-xl p-6 shadow-sm mt-12">
-                    <h3 className="font-bold text-gray-800 mb-4">🏪 Business Information</h3>
+                    <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2"><Building2 size={17} className="text-blue-600" /> Business Information</h3>
                     <div className="space-y-4">
                         <div>
                             <label className="text-sm text-gray-600">Business Name</label>
@@ -206,7 +207,7 @@ function Settings() {
 
                 {/* Tax Settings */}
                 <div className="bg-white rounded-xl p-6 shadow-sm">
-                    <h3 className="font-bold text-gray-800 mb-4">💰 Tax Settings</h3>
+                    <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2"><DollarSign size={17} className="text-green-600" /> Tax Settings</h3>
                     <div className="space-y-4">
                         <div className="flex items-center justify-between">
                             <div>
@@ -251,7 +252,7 @@ function Settings() {
 
                 {/* Loyalty Settings */}
                 <div className="bg-white rounded-xl p-6 shadow-sm">
-                    <h3 className="font-bold text-gray-800 mb-4">⭐ Loyalty Program</h3>
+                    <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2"><Star size={17} className="text-yellow-500" /> Loyalty Program</h3>
                     <div className="space-y-4">
                         <div className="flex items-center justify-between">
                             <div>
@@ -297,7 +298,7 @@ function Settings() {
 
                 {/* Receipt Settings */}
                 <div className="bg-white rounded-xl p-6 shadow-sm">
-                    <h3 className="font-bold text-gray-800 mb-4">🧾 Receipt Settings</h3>
+                    <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2"><Receipt size={17} className="text-indigo-600" /> Receipt Settings</h3>
                     <div className="space-y-4">
                         <div>
                             <label className="text-sm text-gray-600">Receipt Header (Business Name/Branch Name)</label>
@@ -325,7 +326,7 @@ function Settings() {
 
                 {/* Other Settings */}
                 <div className="bg-white rounded-xl p-6 shadow-sm">
-                    <h3 className="font-bold text-gray-800 mb-4">🔔 Other Settings</h3>
+                    <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2"><Bell size={17} className="text-orange-500" /> Other Settings</h3>
                     <div className="flex items-center justify-between">
                         <div>
                             <p className="text-sm font-medium text-gray-700">Low Stock Alerts</p>
@@ -344,16 +345,16 @@ function Settings() {
 
                 {/* Save Button */}
                 {saved && (
-                    <div className="bg-green-50 text-green-600 p-3 rounded-lg text-center font-medium">
-                        ✅ Settings saved successfully!
+                    <div className="bg-green-50 text-green-600 p-3 rounded-lg text-center font-medium flex items-center justify-center gap-2">
+                        <CheckCircle2 size={16} /> Settings saved successfully!
                     </div>
                 )}
                 <button
                     onClick={handleSave}
                     disabled={loading}
-                    className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition disabled:opacity-50"
+                    className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition disabled:opacity-50 flex items-center justify-center gap-2"
                 >
-                    {loading ? 'Saving...' : 'Save Settings'}
+                    <Save size={16} /> {loading ? 'Saving...' : 'Save Settings'}
                 </button>
 
             </div>

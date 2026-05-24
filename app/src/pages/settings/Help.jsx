@@ -1,16 +1,25 @@
 import { useState } from 'react'
 import Layout from '../../components/layout/Layout'
+import {
+    Home, Rocket, Package, HelpCircle, Wrench,
+    LayoutDashboard, ShoppingBag, ScanBarcode, Warehouse,
+    ShoppingCart, FileText, Users, BarChart2, Settings,
+    CheckCircle2, ChevronDown, Phone, Mail, Zap, Globe,
+    Lock, Cloud, ArrowRight, Factory, Info, AlertTriangle,
+    Star, Layers, Tag, Ruler, Printer, FileDown, Share2,
+    QrCode, PenLine
+} from 'lucide-react'
 
 function Help() {
     const [activeTab, setActiveTab] = useState('overview')
     const [expandedFaq, setExpandedFaq] = useState(null)
 
     const tabs = [
-        { id: 'overview', label: '🏠 Overview' },
-        { id: 'getting-started', label: '🚀 Getting Started' },
-        { id: 'modules', label: '📦 Modules' },
-        { id: 'faq', label: '❓ FAQ' },
-        { id: 'troubleshooting', label: '🔧 Troubleshooting' },
+        { id: 'overview',        label: 'Overview',       Icon: Home },
+        { id: 'getting-started', label: 'Getting Started', Icon: Rocket },
+        { id: 'modules',         label: 'Modules',        Icon: Package },
+        { id: 'faq',             label: 'FAQ',            Icon: HelpCircle },
+        { id: 'troubleshooting', label: 'Troubleshooting', Icon: Wrench },
     ]
 
     const toggleFaq = (id) => setExpandedFaq(expandedFaq === id ? null : id)
@@ -73,7 +82,7 @@ function Help() {
     const modules = [
         {
             id: 'dashboard',
-            icon: '📊',
+            Icon: LayoutDashboard,
             title: 'Dashboard',
             color: 'blue',
             steps: [
@@ -85,7 +94,7 @@ function Help() {
         },
         {
             id: 'products',
-            icon: '🧵',
+            Icon: Layers,
             title: 'Products (Fabric Catalog)',
             color: 'purple',
             steps: [
@@ -97,7 +106,7 @@ function Help() {
         },
         {
             id: 'barcode',
-            icon: '🔲',
+            Icon: ScanBarcode,
             title: 'Barcode System',
             color: 'orange',
             steps: [
@@ -125,7 +134,7 @@ function Help() {
         },
         {
             id: 'inventory',
-            icon: '🏭',
+            Icon: Warehouse,
             title: 'Inventory',
             color: 'teal',
             steps: [
@@ -136,7 +145,7 @@ function Help() {
         },
         {
             id: 'sales-pos',
-            icon: '🛒',
+            Icon: ShoppingCart,
             title: 'Sales / POS (Sale karna)',
             color: 'green',
             steps: [
@@ -150,7 +159,7 @@ function Help() {
         },
         {
             id: 'invoice',
-            icon: '🧾',
+            Icon: FileText,
             title: 'Invoice System',
             color: 'indigo',
             steps: [
@@ -164,7 +173,7 @@ function Help() {
         },
         {
             id: 'customers',
-            icon: '👥',
+            Icon: Users,
             title: 'Customers',
             color: 'pink',
             steps: [
@@ -175,7 +184,7 @@ function Help() {
         },
         {
             id: 'reports',
-            icon: '📈',
+            Icon: BarChart2,
             title: 'Reports',
             color: 'yellow',
             steps: [
@@ -186,7 +195,7 @@ function Help() {
         },
         {
             id: 'settings',
-            icon: '⚙️',
+            Icon: Settings,
             title: 'Settings',
             color: 'gray',
             steps: [
@@ -237,19 +246,23 @@ function Help() {
 
                 {/* ── Tab Navigation ── */}
                 <div className="flex flex-wrap gap-2 bg-white rounded-xl p-2 shadow-sm border border-gray-100">
-                    {tabs.map(tab => (
-                        <button
-                            key={tab.id}
-                            onClick={() => setActiveTab(tab.id)}
-                            className={`px-4 py-2 rounded-lg font-bold text-sm transition ${
-                                activeTab === tab.id
-                                    ? 'bg-gray-900 text-white shadow'
-                                    : 'text-gray-500 hover:text-gray-800 hover:bg-gray-50'
-                            }`}
-                        >
-                            {tab.label}
-                        </button>
-                    ))}
+                    {tabs.map(tab => {
+                        const { Icon } = tab
+                        return (
+                            <button
+                                key={tab.id}
+                                onClick={() => setActiveTab(tab.id)}
+                                className={`flex items-center gap-1.5 px-4 py-2 rounded-lg font-bold text-sm transition ${
+                                    activeTab === tab.id
+                                        ? 'bg-gray-900 text-white shadow'
+                                        : 'text-gray-500 hover:text-gray-800 hover:bg-gray-50'
+                                }`}
+                            >
+                                <Icon size={14} />
+                                {tab.label}
+                            </button>
+                        )
+                    })}
                 </div>
 
                 {/* ══════════════════════════════════════════════════════════════
@@ -271,15 +284,15 @@ function Help() {
                         {/* Key Highlights */}
                         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                             {[
-                                { icon: '🔲', title: 'Barcode Tracking', desc: 'Har fabric roll ka unique barcode — production se delivery tak track karo', color: 'bg-orange-50 border-orange-200' },
-                                { icon: '🧾', title: 'Professional Invoice', desc: 'Sale ke baad turant A4 invoice — PDF download ya WhatsApp share', color: 'bg-indigo-50 border-indigo-200' },
-                                { icon: '🌏', title: 'Multi-Branch', desc: 'Pakistan (Karachi) aur Thailand — dono branches ek system mein', color: 'bg-green-50 border-green-200' },
-                                { icon: '📊', title: 'Live Dashboard', desc: 'Aaj ki sales, revenue, low stock alerts — sab real-time', color: 'bg-blue-50 border-blue-200' },
-                                { icon: '🔒', title: 'Secure & Role-Based', desc: 'Owner, Manager, Cashier — sab ki alag permissions', color: 'bg-purple-50 border-purple-200' },
-                                { icon: '☁️', title: 'Cloud-Based', desc: 'Data Google Firebase pe — kisi bhi device se access karo', color: 'bg-teal-50 border-teal-200' },
+                                { Icon: ScanBarcode,   title: 'Barcode Tracking',    desc: 'Har fabric roll ka unique barcode — production se delivery tak track karo', bg: 'bg-orange-50 border-orange-200', ic: 'text-orange-500' },
+                                { Icon: FileText,      title: 'Professional Invoice', desc: 'Sale ke baad turant A4 invoice — PDF download ya WhatsApp share',          bg: 'bg-indigo-50 border-indigo-200', ic: 'text-indigo-500' },
+                                { Icon: Globe,         title: 'Multi-Branch',         desc: 'Pakistan (Karachi) aur Thailand — dono branches ek system mein',           bg: 'bg-green-50 border-green-200',  ic: 'text-green-500' },
+                                { Icon: BarChart2,     title: 'Live Dashboard',       desc: 'Aaj ki sales, revenue, low stock alerts — sab real-time',                  bg: 'bg-blue-50 border-blue-200',   ic: 'text-blue-500' },
+                                { Icon: Lock,          title: 'Secure & Role-Based',  desc: 'Owner, Manager, Cashier — sab ki alag permissions',                        bg: 'bg-purple-50 border-purple-200', ic: 'text-purple-500' },
+                                { Icon: Cloud,         title: 'Cloud-Based',          desc: 'Data Google Firebase pe — kisi bhi device se access karo',                 bg: 'bg-teal-50 border-teal-200',   ic: 'text-teal-500' },
                             ].map((card, i) => (
-                                <div key={i} className={`rounded-xl p-5 border ${card.color}`}>
-                                    <div className="text-3xl mb-2">{card.icon}</div>
+                                <div key={i} className={`rounded-xl p-5 border ${card.bg}`}>
+                                    <div className={`mb-3 ${card.ic}`}><card.Icon size={24} /></div>
                                     <h3 className="font-black text-gray-900 text-sm mb-1">{card.title}</h3>
                                     <p className="text-gray-600 text-xs leading-relaxed">{card.desc}</p>
                                 </div>
@@ -291,25 +304,25 @@ function Help() {
                             <h2 className="text-xl font-black text-gray-900 mb-5">🔄 System Flow — Fabric ka Safar</h2>
                             <div className="flex flex-wrap items-center gap-2 text-sm font-bold">
                                 {[
-                                    ['🏭', 'Production'],
-                                    ['→', null],
-                                    ['🔲', 'Barcode Generate'],
-                                    ['→', null],
-                                    ['📦', 'Warehouse'],
-                                    ['→', null],
-                                    ['🚢', 'Shipped'],
-                                    ['→', null],
-                                    ['🛒', 'Sale / POS'],
-                                    ['→', null],
-                                    ['🧾', 'Invoice'],
-                                    ['→', null],
-                                    ['📱', 'WhatsApp Share'],
-                                ].map(([icon, label], i) => (
-                                    label
-                                        ? <div key={i} className="flex items-center gap-1 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
-                                            <span>{icon}</span><span className="text-gray-700">{label}</span>
+                                    { Icon: Factory,     label: 'Production' },
+                                    { arrow: true },
+                                    { Icon: ScanBarcode, label: 'Barcode Generate' },
+                                    { arrow: true },
+                                    { Icon: Warehouse,   label: 'Warehouse' },
+                                    { arrow: true },
+                                    { Icon: Share2,      label: 'Shipped' },
+                                    { arrow: true },
+                                    { Icon: ShoppingCart, label: 'Sale / POS' },
+                                    { arrow: true },
+                                    { Icon: FileText,    label: 'Invoice' },
+                                    { arrow: true },
+                                    { Icon: Share2,      label: 'WhatsApp Share' },
+                                ].map((item, i) => (
+                                    item.arrow
+                                        ? <ArrowRight key={i} size={14} className="text-gray-400" />
+                                        : <div key={i} className="flex items-center gap-1.5 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
+                                            <item.Icon size={14} className="text-gray-500" /><span className="text-gray-700">{item.label}</span>
                                           </div>
-                                        : <span key={i} className="text-gray-400 text-lg font-black">{icon}</span>
                                 ))}
                             </div>
                         </div>
@@ -345,37 +358,37 @@ function Help() {
 
                         {[
                             {
-                                n: '1', icon: '🔑', title: 'Login karo',
+                                n: '1', Icon: Lock, title: 'Login karo',
                                 desc: 'Admin se email aur password lo → Browser mein system ki URL kholein → Email/Password daal ke Login dabao.',
                                 tip: 'Pehli baar login karne pe Dashboard seedha khulega.'
                             },
                             {
-                                n: '2', icon: '⚙️', title: 'Settings fill karo (Owner)',
+                                n: '2', Icon: Settings, title: 'Settings fill karo (Owner)',
                                 desc: 'Left menu → Settings → Business Info mein Factory ka naam, address, phone, NTN number likho. Yeh invoice pe print hoga.',
                                 tip: 'Currency mein PKR ya THB apni branch ke hisaab se select karo.'
                             },
                             {
-                                n: '3', icon: '🧵', title: 'Products add karo',
+                                n: '3', Icon: Layers, title: 'Products add karo',
                                 desc: 'Left menu → Products → "Add Product" → Fabric ka naam, price per meter, category, fabric type, color, width sab bharein → Save.',
                                 tip: 'Unit "meters" rakho agar fabric length mein bechte ho.'
                             },
                             {
-                                n: '4', icon: '🔲', title: 'Barcodes generate karo',
+                                n: '4', Icon: ScanBarcode, title: 'Barcodes generate karo',
                                 desc: 'Left menu → Barcode → Generate tab → Product select karo → Generate dabao → Label print karo → Fabric pe chipkao.',
                                 tip: 'Har fabric roll ya batch ka alag barcode hona chahiye.'
                             },
                             {
-                                n: '5', icon: '👥', title: 'Customers add karo (optional)',
+                                n: '5', Icon: Users, title: 'Customers add karo (optional)',
                                 desc: 'Left menu → Customers → "Add Customer" → Naam aur phone number bharein → Save. Loyalty program ke liye useful hai.',
                                 tip: 'Agar customer repeat buyer hai to zaroor add karo — uski full history track hoti hai.'
                             },
                             {
-                                n: '6', icon: '🛒', title: 'Pehli Sale karo',
+                                n: '6', Icon: ShoppingCart, title: 'Pehli Sale karo',
                                 desc: 'Left menu → Sales → POS → Product search karo ya barcode scan karo → Cart mein add karo → Payment method choose karo → Complete Sale dabao.',
                                 tip: 'Sale ke baad "View Invoice" se professional invoice dekhein aur share karein.'
                             },
                             {
-                                n: '7', icon: '📊', title: 'Reports check karo',
+                                n: '7', Icon: BarChart2, title: 'Reports check karo',
                                 desc: 'Dashboard pe daily snapshot milta hai. Detailed reports ke liye Left menu → Reports → Date range select karo.',
                                 tip: 'Rosana raat ko Dashboard dekho — pata chalega din kaisa raha.'
                             },
@@ -386,7 +399,7 @@ function Help() {
                                 </div>
                                 <div className="flex-1">
                                     <h3 className="font-black text-gray-900 mb-1 flex items-center gap-2">
-                                        <span>{item.icon}</span> {item.title}
+                                        <item.Icon size={16} className="text-blue-600 flex-shrink-0" /> {item.title}
                                     </h3>
                                     <p className="text-gray-700 text-sm leading-relaxed">{item.desc}</p>
                                     <div className="mt-2 bg-blue-50 border border-blue-100 rounded-lg px-3 py-1.5 text-xs text-blue-700 font-medium">
@@ -405,11 +418,12 @@ function Help() {
                     <div className="space-y-6">
                         {modules.map((mod) => {
                             const c = colorMap[mod.color]
+                            const ModIcon = mod.Icon
                             return (
                                 <div key={mod.id} className={`rounded-2xl border ${c.bg} ${c.border} overflow-hidden shadow-sm`}>
                                     {/* Module Header */}
                                     <div className={`px-6 py-4 flex items-center gap-3 ${c.light}`}>
-                                        <span className="text-3xl">{mod.icon}</span>
+                                        <ModIcon size={22} className={c.text} />
                                         <h3 className={`font-black text-lg ${c.text}`}>{mod.title}</h3>
                                     </div>
                                     {/* Steps */}
@@ -444,7 +458,7 @@ function Help() {
                                     className="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition text-left"
                                 >
                                     <span className="font-bold text-gray-900 text-sm pr-4">{item.id}. {item.question}</span>
-                                    <span className={`text-xl font-black text-gray-400 flex-shrink-0 transition-transform duration-200 ${expandedFaq === item.id ? 'rotate-45' : ''}`}>+</span>
+                                    <ChevronDown size={16} className={`text-gray-400 flex-shrink-0 transition-transform duration-200 ${expandedFaq === item.id ? 'rotate-180' : ''}`} />
                                 </button>
                                 {expandedFaq === item.id && (
                                     <div className="px-6 py-4 bg-blue-50 border-t border-blue-100">
@@ -468,7 +482,7 @@ function Help() {
                         {[
                             {
                                 issue: 'Login nahi ho raha',
-                                icon: '🔐',
+                                Icon: Lock,
                                 solutions: [
                                     'Email aur password dobara check karo — spelling mistake?',
                                     'Internet connection check karo',
@@ -479,7 +493,7 @@ function Help() {
                             },
                             {
                                 issue: 'Barcode scan nahi ho raha',
-                                icon: '🔲',
+                                Icon: ScanBarcode,
                                 solutions: [
                                     'Camera permission Allow karo — browser ne pucha hoga, Allow dabao',
                                     'Barcode ke saamne achhe se camera rakho — blur na ho',
@@ -490,7 +504,7 @@ function Help() {
                             },
                             {
                                 issue: 'Products POS mein nahi dikh rahe',
-                                icon: '🛒',
+                                Icon: ShoppingCart,
                                 solutions: [
                                     'Products page pe check karo — product add hua hai ya nahi',
                                     'Page refresh karo (F5)',
@@ -500,7 +514,7 @@ function Help() {
                             },
                             {
                                 issue: 'Sale save nahi ho rahi',
-                                icon: '💳',
+                                Icon: FileText,
                                 solutions: [
                                     'Internet connection check karo — WiFi ya mobile data on hai?',
                                     'Cart mein koi item hai? — khali cart se sale nahi hoti',
@@ -510,7 +524,7 @@ function Help() {
                             },
                             {
                                 issue: 'Invoice print theek nahi aa raha',
-                                icon: '🧾',
+                                Icon: Printer,
                                 solutions: [
                                     'Printer on aur connected hai?',
                                     'Browser ka print dialog — "More settings" mein A4 size select karo',
@@ -520,7 +534,7 @@ function Help() {
                             },
                             {
                                 issue: 'Data load nahi ho raha / blank page',
-                                icon: '📊',
+                                Icon: BarChart2,
                                 solutions: [
                                     'Internet speed check karo — slow internet se Firebase data late aata hai',
                                     'Page hard refresh karo: Ctrl+Shift+R',
@@ -531,7 +545,7 @@ function Help() {
                             },
                             {
                                 issue: 'WhatsApp share kaam nahi kar raha',
-                                icon: '📱',
+                                Icon: Share2,
                                 solutions: [
                                     'Mobile pe try karo — desktop pe WhatsApp Web install hona chahiye',
                                     'Browser ne popup block kiya hoga — allow karo',
@@ -542,13 +556,13 @@ function Help() {
                         ].map((item, i) => (
                             <div key={i} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
                                 <div className="px-6 py-3 bg-red-50 border-b border-red-100 flex items-center gap-2">
-                                    <span className="text-xl">{item.icon}</span>
+                                    <item.Icon size={15} className="text-red-500 flex-shrink-0" />
                                     <h3 className="font-black text-red-700 text-sm">{item.issue}</h3>
                                 </div>
                                 <div className="px-6 py-4 space-y-2">
                                     {item.solutions.map((sol, si) => (
                                         <div key={si} className="flex items-start gap-2 text-sm text-gray-700">
-                                            <span className="text-green-500 font-black mt-0.5 flex-shrink-0">✓</span>
+                                            <CheckCircle2 size={13} className="text-green-500 mt-0.5 flex-shrink-0" />
                                             <span>{sol}</span>
                                         </div>
                                     ))}
@@ -565,7 +579,7 @@ function Help() {
                         System support ke liye apne administrator ya developer se rabta karein.
                     </p>
                     <div className="inline-flex items-center gap-2 bg-white/10 text-white text-sm font-bold px-5 py-2 rounded-xl">
-                        📧 techpeer.pk@gmail.com
+                        <Mail size={14} /> techpeer.pk@gmail.com
                     </div>
                     <p className="text-gray-600 text-xs mt-4 font-bold uppercase tracking-widest">
                         Fabric POS · v2.0 · Powered by Firebase

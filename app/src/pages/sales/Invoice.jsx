@@ -6,6 +6,7 @@ import useAuthStore from '../../store/authStore-multi-branch'
 import FirestoreService from '../../firebase/firestore-multi-branch'
 import html2canvas from 'html2canvas'
 import { jsPDF } from 'jspdf'
+import { ArrowLeft, Printer, FileDown, Share2, Phone, Mail, Factory } from 'lucide-react'
 
 // Generate invoice number from sale ID
 const getInvoiceNo = (id) => {
@@ -125,8 +126,8 @@ function Invoice() {
             {user && (
                 <div className="max-w-3xl mx-auto mb-6 print:hidden">
                     <div className="flex justify-between items-center mb-3">
-                        <button onClick={() => navigate(-1)} className="text-gray-500 hover:text-gray-800 font-medium text-sm transition">
-                            ← Back
+                        <button onClick={() => navigate(-1)} className="text-gray-500 hover:text-gray-800 font-medium text-sm transition flex items-center gap-1">
+                            <ArrowLeft size={15} /> Back
                         </button>
                         <span className="text-xs text-gray-400 font-bold uppercase tracking-widest">
                             {getInvoiceNo(sale.id)}
@@ -134,13 +135,13 @@ function Invoice() {
                     </div>
                     <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex flex-wrap gap-2 justify-center">
                         <button onClick={() => window.print()} className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-bold text-sm transition">
-                            🖨️ Print
+                            <Printer size={15} /> Print
                         </button>
                         <button onClick={downloadPDF} className="flex items-center gap-2 px-4 py-2 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-xl font-bold text-sm transition">
-                            📄 PDF
+                            <FileDown size={15} /> PDF
                         </button>
                         <button onClick={shareWhatsApp} className="flex items-center gap-2 px-4 py-2 bg-green-50 hover:bg-green-100 text-green-600 rounded-xl font-bold text-sm transition">
-                            📱 WhatsApp
+                            <Share2 size={15} /> WhatsApp
                         </button>
                     </div>
                 </div>
@@ -162,7 +163,7 @@ function Invoice() {
                             <h1 className="text-white text-xl font-black tracking-tight">
                                 {settings?.businessName || 'Fabric Factory'}
                             </h1>
-                            <p className="text-gray-400 text-xs mt-0.5">🏭 Fabric Factory — Karachi, Pakistan</p>
+                            <p className="text-gray-400 text-xs mt-0.5 flex items-center gap-1"><Factory size={11} /> Fabric Factory — Karachi, Pakistan</p>
                         </div>
                     </div>
                     <div className="text-right">
@@ -181,8 +182,8 @@ function Invoice() {
                             <p className="text-xs font-black text-gray-400 uppercase tracking-widest mb-2">From</p>
                             <p className="font-black text-gray-800">{settings?.businessName || 'Fabric Factory'}</p>
                             {settings?.address && <p className="text-gray-500 text-sm mt-1">{settings.address}</p>}
-                            {settings?.phone && <p className="text-gray-500 text-sm">📞 {settings.phone}</p>}
-                            {settings?.email && <p className="text-gray-500 text-sm">✉️ {settings.email}</p>}
+                            {settings?.phone && <p className="text-gray-500 text-sm flex items-center gap-1"><Phone size={11} /> {settings.phone}</p>}
+                            {settings?.email && <p className="text-gray-500 text-sm flex items-center gap-1"><Mail size={11} /> {settings.email}</p>}
                             {settings?.ntn && (
                                 <p className="text-gray-400 text-xs mt-2 font-bold">NTN: {settings.ntn}</p>
                             )}
@@ -191,7 +192,7 @@ function Invoice() {
                         <div>
                             <p className="text-xs font-black text-gray-400 uppercase tracking-widest mb-2">Bill To</p>
                             <p className="font-black text-gray-800 text-lg">{sale.customerName || 'Customer'}</p>
-                            {sale.customerPhone && <p className="text-gray-500 text-sm mt-1">📞 {sale.customerPhone}</p>}
+                            {sale.customerPhone && <p className="text-gray-500 text-sm mt-1 flex items-center gap-1"><Phone size={11} /> {sale.customerPhone}</p>}
                             <div className="mt-3 flex items-center gap-2">
                                 <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
                                     sale.paymentMethod === 'cash' ? 'bg-green-100 text-green-700' :

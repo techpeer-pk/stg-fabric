@@ -6,6 +6,7 @@ import { doc, getDoc } from 'firebase/firestore'
 import FirestoreService, { getUserSessionContext } from '../../firebase/firestore-multi-branch'
 import useAuthStore from '../../store/authStore-multi-branch'
 import { handleError, showSuccess } from '../../utils/errorHandler'
+import { Building2, ArrowRight, ArrowLeft, BookOpen, AlertCircle, LogIn } from 'lucide-react'
 
 function Login() {
     const [email, setEmail] = useState('')
@@ -116,7 +117,7 @@ function Login() {
             <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
                 <div className="bg-white p-8 rounded-3xl shadow-xl w-full max-w-md border border-gray-100">
                     <div className="text-center mb-8">
-                        <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center text-3xl mx-auto mb-4">🏪</div>
+                        <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4"><Building2 size={32} /></div>
                         <h2 className="text-2xl font-black text-gray-800 uppercase tracking-tight">Select Branch</h2>
                         <p className="text-gray-500 mt-2">Which location would you like to open today?</p>
                     </div>
@@ -133,7 +134,7 @@ function Login() {
                                         <p className="font-bold text-gray-800 group-hover:text-blue-700">{branch.branchName}</p>
                                         <p className="text-xs text-gray-500 uppercase tracking-widest font-bold mt-0.5">{branch.role}</p>
                                     </div>
-                                    <span className="text-gray-300 group-hover:text-blue-500">→</span>
+                                    <ArrowRight size={16} className="text-gray-300 group-hover:text-blue-500" />
                                 </div>
                             </button>
                         ))}
@@ -146,7 +147,7 @@ function Login() {
                         }}
                         className="w-full mt-6 text-sm text-gray-400 font-bold uppercase tracking-widest hover:text-gray-600 transition"
                     >
-                        ← Back to Login
+                        <ArrowLeft size={14} className="inline mr-1" /> Back to Login
                     </button>
                 </div>
             </div>
@@ -170,8 +171,8 @@ function Login() {
 
                 {/* Error */}
                 {error && (
-                    <div className="bg-red-50 text-red-500 p-3 rounded-lg mb-4 text-sm">
-                        {error}
+                    <div className="bg-red-50 text-red-500 p-3 rounded-lg mb-4 text-sm flex items-center gap-2">
+                        <AlertCircle size={15} className="flex-shrink-0" /> {error}
                     </div>
                 )}
 
@@ -208,9 +209,9 @@ function Login() {
                     <button
                         type="submit"
                         disabled={loading}
-                        className="w-full bg-blue-600 text-white py-2 rounded-lg font-semibold hover:bg-blue-700 transition disabled:opacity-50"
+                        className="w-full bg-blue-600 text-white py-2 rounded-lg font-semibold hover:bg-blue-700 transition disabled:opacity-50 flex items-center justify-center gap-2"
                     >
-                        {loading ? 'Signing in...' : 'Sign In'}
+                        <LogIn size={16} /> {loading ? 'Signing in...' : 'Sign In'}
                     </button>
                 </form>
 
@@ -220,8 +221,8 @@ function Login() {
                         <span className="text-gray-400">Admin se rabta karein</span>
                     </div>
                     <div>
-                        <Link to="/docs" className="text-gray-400 hover:text-blue-600 transition font-medium">
-                            📘 View Documentation
+                        <Link to="/docs" className="text-gray-400 hover:text-blue-600 transition font-medium flex items-center justify-center gap-1">
+                            <BookOpen size={13} /> View Documentation
                         </Link>
                     </div>
                 </div>
