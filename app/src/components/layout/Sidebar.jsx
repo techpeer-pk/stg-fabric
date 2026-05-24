@@ -81,7 +81,7 @@ function Sidebar({ isOpen, setIsOpen }) {
             {/* ── Logo ── */}
             <div className="px-5 py-4 border-b border-gray-700 dark:border-gray-800 flex items-center gap-3">
                 <img
-                    src="/src/assets/images/stg_logo.jpeg"
+                    src="/stg_logo.jpeg"
                     alt="STG Logo"
                     className="h-10 w-10 rounded-lg object-cover flex-shrink-0"
                 />

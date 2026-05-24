@@ -4,6 +4,8 @@ import useAuthStore from '../../store/authStore-multi-branch'
 import FirestoreService from '../../firebase/firestore-multi-branch'
 import { db } from '../../firebase/config'
 import { handleError, showSuccess } from '../../utils/errorHandler'
+import { sendPasswordResetEmail } from 'firebase/auth'
+import { auth } from '../../firebase/config'
 import {
     collection,
     getDocs,
@@ -182,9 +184,16 @@ function Employees() {
                 updatedAt: serverTimestamp()
             }, { merge: true })
 
+            // Send password reset email so employee can set their own password
+            try {
+                await sendPasswordResetEmail(auth, form.email)
+                showSuccess(`Employee saved! Password reset email sent to ${form.email}`)
+            } catch {
+                showSuccess('Employee saved! Ask them to use "Forgot Password" on login page.')
+            }
+
             setForm({ uid: '', name: '', email: '', role: 'cashier', assignedBranches: [] })
             setShowForm(false)
-            showSuccess('Employee saved successfully')
             fetchApprovedEmployees()
         } catch (err) {
             handleError(err, 'Save Employee', 'Failed to save employee')
@@ -271,8 +280,13 @@ function Employees() {
 
             {showForm && (
                 <div className="bg-white rounded-xl p-6 shadow-sm mb-6 max-w-2xl">
-                    <h3 className="text-lg font-semibold text-gray-700 mb-4">Set Employee Permissions</h3>
-                    <p className="text-xs text-gray-400 mb-4">Note: The UID must match the user's Firebase Authentication ID.</p>
+                    <h3 className="text-lg font-semibold text-gray-700 mb-3">Set Employee Permissions</h3>
+                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4 text-xs text-amber-800">
+                        <p className="font-bold mb-1">⚠️ 2 Steps zaroor karein:</p>
+                        <p>1. Pehle <strong>Firebase Console → Authentication → Add User</strong> se user banayein (email + password)</p>
+                        <p>2. Wahan se <strong>UID copy</strong> karein aur neeche paste karein</p>
+                        <p className="mt-1 text-amber-600">Save karte waqt employee ko password reset email automatically jayegi.</p>
+                    </div>
                     <form onSubmit={handleSubmit} className="grid grid-cols-2 gap-4">
                         <div className="col-span-2">
                             <label className="text-sm text-gray-600">User UID *</label>

@@ -27,31 +27,46 @@ function Dashboard() {
         allSales: [], loading: true
     })
     const [chartRange, setChartRange] = useState('weekly')
+    const [customFrom, setCustomFrom] = useState('')
+    const [customTo, setCustomTo] = useState('')
     const currency = 'PKR'
 
-    const buildChartData = (sales, range) => {
+    const buildChartData = (sales, range, from = '', to = '') => {
         const now = new Date()
         const data = []
+        const getAmt = s => s.finalAmount || s.total || 0
         if (range === 'daily') {
             for (let i = 23; i >= 0; i--) {
                 const hour = new Date(now); hour.setHours(now.getHours() - i, 0, 0, 0)
                 const nextHour = new Date(hour); nextHour.setHours(hour.getHours() + 1)
-                const total = sales.filter(s => { const t = s.createdAt?.toDate?.(); return t && t >= hour && t < nextHour }).reduce((sum, s) => sum + s.total, 0)
+                const total = sales.filter(s => { const t = s.createdAt?.toDate?.(); return t && t >= hour && t < nextHour }).reduce((sum, s) => sum + getAmt(s), 0)
                 data.push({ label: `${hour.getHours()}:00`, sales: parseFloat(total.toFixed(2)) })
             }
         } else if (range === 'weekly') {
             for (let i = 6; i >= 0; i--) {
                 const day = new Date(now); day.setDate(now.getDate() - i); day.setHours(0, 0, 0, 0)
                 const nextDay = new Date(day); nextDay.setDate(day.getDate() + 1)
-                const total = sales.filter(s => { const t = s.createdAt?.toDate?.(); return t && t >= day && t < nextDay }).reduce((sum, s) => sum + s.total, 0)
+                const total = sales.filter(s => { const t = s.createdAt?.toDate?.(); return t && t >= day && t < nextDay }).reduce((sum, s) => sum + getAmt(s), 0)
                 data.push({ label: day.toLocaleDateString('en-PK', { weekday: 'short', day: 'numeric' }), sales: parseFloat(total.toFixed(2)) })
             }
         } else if (range === 'monthly') {
             for (let i = 3; i >= 0; i--) {
                 const weekStart = new Date(now); weekStart.setDate(now.getDate() - (i + 1) * 7); weekStart.setHours(0, 0, 0, 0)
                 const weekEnd = new Date(now); weekEnd.setDate(now.getDate() - i * 7); weekEnd.setHours(23, 59, 59, 999)
-                const total = sales.filter(s => { const t = s.createdAt?.toDate?.(); return t && t >= weekStart && t <= weekEnd }).reduce((sum, s) => sum + s.total, 0)
+                const total = sales.filter(s => { const t = s.createdAt?.toDate?.(); return t && t >= weekStart && t <= weekEnd }).reduce((sum, s) => sum + getAmt(s), 0)
                 data.push({ label: `Week ${4 - i}`, sales: parseFloat(total.toFixed(2)) })
+            }
+        } else if (range === 'custom' && from && to) {
+            const start = new Date(from + 'T00:00:00')
+            const end = new Date(to + 'T23:59:59')
+            const diffDays = Math.ceil((end - start) / (1000 * 60 * 60 * 24))
+            const steps = Math.min(diffDays + 1, 31)
+            for (let i = 0; i < steps; i++) {
+                const day = new Date(start); day.setDate(start.getDate() + i)
+                if (day > end) break
+                const nextDay = new Date(day); nextDay.setDate(day.getDate() + 1)
+                const total = sales.filter(s => { const t = s.createdAt?.toDate?.(); return t && t >= day && t < nextDay }).reduce((sum, s) => sum + getAmt(s), 0)
+                data.push({ label: day.toLocaleDateString('en-PK', { month: 'short', day: 'numeric' }), sales: parseFloat(total.toFixed(2)) })
             }
         }
         return data
@@ -126,12 +141,65 @@ function Dashboard() {
 
     const handleChartRange = (range) => {
         setChartRange(range)
-        setStats(prev => ({ ...prev, chartData: buildChartData(prev.allSales, range) }))
+        if (range !== 'custom') {
+            setStats(prev => ({ ...prev, chartData: buildChartData(prev.allSales, range) }))
+        }
+    }
+
+    const handleApplyCustomRange = () => {
+        if (!customFrom || !customTo) return
+        setStats(prev => ({ ...prev, chartData: buildChartData(prev.allSales, 'custom', customFrom, customTo) }))
     }
 
     const calcGrowth = (curr, prev) => prev === 0 ? (curr > 0 ? 100 : 0) : ((curr - prev) / prev) * 100
-    const salesGrowth = calcGrowth(stats.todaySales, stats.yesterdaySales)
-    const transGrowth = calcGrowth(stats.todayTransactions, stats.yesterdayTransactions)
+
+    // ── Range-based stats for cards ───────────────────────────────────────────
+    const getRangeStats = () => {
+        const now = new Date()
+        const getAmt = s => s.finalAmount || s.total || 0
+        let current = [], previous = [], growthLabel = ''
+
+        if (chartRange === 'daily') {
+            const todayStart = new Date(now); todayStart.setHours(0, 0, 0, 0)
+            const yestStart  = new Date(todayStart); yestStart.setDate(yestStart.getDate() - 1)
+            current  = stats.allSales.filter(s => { const t = s.createdAt?.toDate?.(); return t && t >= todayStart && t <= now })
+            previous = stats.allSales.filter(s => { const t = s.createdAt?.toDate?.(); return t && t >= yestStart && t < todayStart })
+            growthLabel = 'vs yesterday'
+        } else if (chartRange === 'weekly') {
+            const weekStart     = new Date(now); weekStart.setDate(now.getDate() - 7); weekStart.setHours(0, 0, 0, 0)
+            const prevWeekStart = new Date(weekStart); prevWeekStart.setDate(weekStart.getDate() - 7)
+            current  = stats.allSales.filter(s => { const t = s.createdAt?.toDate?.(); return t && t >= weekStart && t <= now })
+            previous = stats.allSales.filter(s => { const t = s.createdAt?.toDate?.(); return t && t >= prevWeekStart && t < weekStart })
+            growthLabel = 'vs last week'
+        } else if (chartRange === 'monthly') {
+            const monthStart    = new Date(now.getFullYear(), now.getMonth(), 1)
+            const prevMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+            const prevMonthEnd  = new Date(monthStart)
+            current  = stats.allSales.filter(s => { const t = s.createdAt?.toDate?.(); return t && t >= monthStart && t <= now })
+            previous = stats.allSales.filter(s => { const t = s.createdAt?.toDate?.(); return t && t >= prevMonthStart && t < prevMonthEnd })
+            growthLabel = 'vs last month'
+        } else if (chartRange === 'custom' && customFrom && customTo) {
+            const from = new Date(customFrom + 'T00:00:00')
+            const to   = new Date(customTo   + 'T23:59:59')
+            current = stats.allSales.filter(s => { const t = s.createdAt?.toDate?.(); return t && t >= from && t <= to })
+            growthLabel = 'in range'
+        } else {
+            // fallback — all sales
+            current = stats.allSales
+            growthLabel = 'all time'
+        }
+
+        const curSales  = current.reduce((sum, s)  => sum + getAmt(s), 0)
+        const prevSales = previous.reduce((sum, s) => sum + getAmt(s), 0)
+        return {
+            sales: curSales, transactions: current.length,
+            prevSales, prevTransactions: previous.length,
+            growthLabel
+        }
+    }
+
+    const rangeLabels = { daily: "Today's", weekly: "This Week's", monthly: "This Month's", custom: 'Period', }
+    const rangePrefix = rangeLabels[chartRange] || "Total"
 
     if (stats.loading) return (
         <Layout title="Dashboard">
@@ -139,16 +207,20 @@ function Dashboard() {
         </Layout>
     )
 
+    const rs = getRangeStats()
+    const salesGrowth = calcGrowth(rs.sales, rs.prevSales)
+    const transGrowth = calcGrowth(rs.transactions, rs.prevTransactions)
+
     const statCards = [
         {
-            label: "Today's Sales", icon: DollarSign, iconColor: 'text-green-500', bg: 'bg-green-50',
-            value: `${currency} ${stats.todaySales.toLocaleString()}`,
-            growth: salesGrowth, growthLabel: 'vs yesterday'
+            label: `${rangePrefix} Sales`, icon: DollarSign, iconColor: 'text-green-500', bg: 'bg-green-50',
+            value: `${currency} ${rs.sales.toLocaleString()}`,
+            growth: salesGrowth, growthLabel: rs.growthLabel
         },
         {
             label: 'Transactions', icon: ReceiptText, iconColor: 'text-blue-500', bg: 'bg-blue-50',
-            value: stats.todayTransactions,
-            growth: transGrowth, growthLabel: 'vs yesterday'
+            value: rs.transactions,
+            growth: transGrowth, growthLabel: rs.growthLabel
         },
         {
             label: 'Products', icon: Package, iconColor: 'text-purple-500', bg: 'bg-purple-50',
@@ -178,6 +250,29 @@ function Dashboard() {
                         </div>
                     </div>
                     <BarChart2 size={40} className="text-white/10" />
+                </div>
+
+                {/* ── Range Selector ── */}
+                <div className="flex flex-wrap items-center gap-2">
+                    {['daily', 'weekly', 'monthly', 'custom'].map(range => (
+                        <button key={range} onClick={() => handleChartRange(range)}
+                            className={`px-4 py-2 rounded-lg text-xs font-bold capitalize transition ${chartRange === range ? 'bg-blue-600 text-white shadow-md' : 'bg-white dark:bg-gray-900 text-gray-500 border border-gray-200 dark:border-gray-700 hover:bg-gray-50'}`}>
+                            {range === 'daily' ? 'Today' : range === 'weekly' ? 'This Week' : range === 'monthly' ? 'This Month' : 'Custom'}
+                        </button>
+                    ))}
+                    {chartRange === 'custom' && (
+                        <div className="flex flex-wrap items-center gap-2">
+                            <input type="date" value={customFrom} onChange={e => setCustomFrom(e.target.value)}
+                                className="border border-gray-200 dark:border-gray-700 rounded-lg px-2 py-1.5 text-xs dark:bg-gray-800 dark:text-gray-200" />
+                            <span className="text-gray-400 text-xs">to</span>
+                            <input type="date" value={customTo} onChange={e => setCustomTo(e.target.value)}
+                                className="border border-gray-200 dark:border-gray-700 rounded-lg px-2 py-1.5 text-xs dark:bg-gray-800 dark:text-gray-200" />
+                            <button onClick={handleApplyCustomRange} disabled={!customFrom || !customTo}
+                                className="px-3 py-1.5 rounded-lg text-xs font-bold bg-blue-600 text-white disabled:opacity-40 transition hover:bg-blue-700">
+                                Apply
+                            </button>
+                        </div>
+                    )}
                 </div>
 
                 {/* ── Stat Cards ── */}
@@ -212,21 +307,13 @@ function Dashboard() {
 
                 {/* ── Sales Chart ── */}
                 <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-100 dark:border-gray-800 p-5">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
-                        <div className="flex items-center gap-2">
-                            <BarChart2 size={16} className="text-blue-600" />
-                            <div>
-                                <h3 className="font-black text-gray-800 dark:text-gray-100 text-sm uppercase tracking-widest">Sales Overview</h3>
-                                <p className="text-gray-400 text-xs mt-0.5">Revenue trend over time</p>
-                            </div>
-                        </div>
-                        <div className="flex gap-2">
-                            {['daily', 'weekly', 'monthly'].map(range => (
-                                <button key={range} onClick={() => handleChartRange(range)}
-                                    className={`px-3 py-1.5 rounded-lg text-xs font-bold capitalize transition ${chartRange === range ? 'bg-blue-600 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-500 hover:bg-gray-200'}`}>
-                                    {range}
-                                </button>
-                            ))}
+                    <div className="flex items-center gap-2 mb-5">
+                        <BarChart2 size={16} className="text-blue-600" />
+                        <div>
+                            <h3 className="font-black text-gray-800 dark:text-gray-100 text-sm uppercase tracking-widest">Sales Overview</h3>
+                            <p className="text-gray-400 text-xs mt-0.5">
+                                {chartRange === 'daily' ? 'Today (hourly)' : chartRange === 'weekly' ? 'Last 7 days' : chartRange === 'monthly' ? 'Last 4 weeks' : customFrom && customTo ? `${customFrom} → ${customTo}` : 'Select range above'}
+                            </p>
                         </div>
                     </div>
                     <ResponsiveContainer width="100%" height={250}>

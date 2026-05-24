@@ -227,7 +227,7 @@ function Help() {
                 {/* ── Hero Banner ── */}
                 <div className="bg-gray-900 rounded-2xl px-8 py-7 flex items-center gap-5 shadow-lg mt-12">
                     <img
-                        src="/src/assets/images/stg_logo.jpeg"
+                        src="/stg_logo.jpeg"
                         alt="Logo"
                         className="h-14 w-14 rounded-xl object-cover flex-shrink-0"
                         onError={(e) => { e.target.style.display = 'none' }}

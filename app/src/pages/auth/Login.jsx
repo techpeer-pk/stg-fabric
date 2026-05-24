@@ -6,7 +6,8 @@ import { doc, getDoc } from 'firebase/firestore'
 import FirestoreService, { getUserSessionContext } from '../../firebase/firestore-multi-branch'
 import useAuthStore from '../../store/authStore-multi-branch'
 import { handleError, showSuccess } from '../../utils/errorHandler'
-import { Building2, ArrowRight, ArrowLeft, BookOpen, AlertCircle, LogIn } from 'lucide-react'
+import { Building2, ArrowRight, ArrowLeft, BookOpen, AlertCircle, LogIn, KeyRound } from 'lucide-react'
+import { sendPasswordResetEmail } from 'firebase/auth'
 
 function Login() {
     const [email, setEmail] = useState('')
@@ -18,6 +19,24 @@ function Login() {
     const [showBranchSelect, setShowBranchSelect] = useState(false)
     const [availableBranches, setAvailableBranches] = useState([])
     const [loginContext, setLoginContext] = useState(null)
+    const [showForgot, setShowForgot] = useState(false)
+    const [forgotEmail, setForgotEmail] = useState('')
+    const [forgotMsg, setForgotMsg] = useState('')
+    const [forgotLoading, setForgotLoading] = useState(false)
+
+    const handleForgotPassword = async (e) => {
+        e.preventDefault()
+        setForgotLoading(true)
+        setForgotMsg('')
+        try {
+            await sendPasswordResetEmail(auth, forgotEmail)
+            setForgotMsg('✅ Password reset email sent! Inbox check karein.')
+        } catch (err) {
+            setForgotMsg('❌ Email nahi mila. Admin se rabta karein.')
+        } finally {
+            setForgotLoading(false)
+        }
+    }
 
     const handleLogin = async (e) => {
         e.preventDefault()
@@ -161,7 +180,7 @@ function Login() {
                 {/* Logo */}
                 <div className="text-center mb-8">
                     <img
-                        src="/src/assets/images/stg_logo.jpeg"
+                        src="/stg_logo.jpeg"
                         alt="STG Logo"
                         className="h-20 w-20 rounded-2xl object-cover mx-auto mb-3 shadow-lg"
                     />
@@ -215,7 +234,43 @@ function Login() {
                     </button>
                 </form>
 
-                <div className="mt-8 text-center text-sm text-gray-500 space-y-2">
+                {/* Forgot Password */}
+                <div className="mt-4 text-center">
+                    <button
+                        onClick={() => { setShowForgot(!showForgot); setForgotMsg('') }}
+                        className="text-sm text-blue-500 hover:text-blue-700 font-medium flex items-center gap-1 mx-auto transition"
+                    >
+                        <KeyRound size={13} /> Password bhool gaye?
+                    </button>
+                </div>
+
+                {showForgot && (
+                    <div className="mt-3 bg-blue-50 border border-blue-100 rounded-xl p-4">
+                        <p className="text-xs text-blue-700 font-bold mb-3">Email likhein — password reset link bheja jayega</p>
+                        <form onSubmit={handleForgotPassword} className="flex gap-2">
+                            <input
+                                type="email"
+                                value={forgotEmail}
+                                onChange={(e) => setForgotEmail(e.target.value)}
+                                placeholder="aapka@email.com"
+                                required
+                                className="flex-1 border border-blue-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                            />
+                            <button
+                                type="submit"
+                                disabled={forgotLoading}
+                                className="bg-blue-600 text-white px-3 py-2 rounded-lg text-sm font-bold hover:bg-blue-700 disabled:opacity-50 whitespace-nowrap"
+                            >
+                                {forgotLoading ? '...' : 'Send'}
+                            </button>
+                        </form>
+                        {forgotMsg && (
+                            <p className="text-xs mt-2 font-medium text-blue-800">{forgotMsg}</p>
+                        )}
+                    </div>
+                )}
+
+                <div className="mt-6 text-center text-sm text-gray-500 space-y-2">
                     <div>
                         Account nahi hai?{' '}
                         <span className="text-gray-400">Admin se rabta karein</span>
@@ -227,8 +282,8 @@ function Login() {
                     </div>
                 </div>
 
-                <p className="text-center text-gray-400 text-sm mt-6">
-                    GPOS v2.0.0 — Modern Multi-Branch POS 🔥
+                <p className="text-center text-gray-400 text-xs mt-6">
+                    Fabric POS v2.0 · Powered by Firebase
                 </p>
             </div>
         </div>

@@ -154,7 +154,7 @@ function Invoice() {
                 <div className="bg-gray-900 px-8 py-5 flex justify-between items-center">
                     <div className="flex items-center gap-4">
                         <img
-                            src="/src/assets/images/stg_logo.jpeg"
+                            src="/stg_logo.jpeg"
                             alt="Logo"
                             className="h-12 w-12 rounded-xl object-cover"
                             onError={(e) => { e.target.style.display = 'none' }}

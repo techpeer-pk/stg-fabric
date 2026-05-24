@@ -315,7 +315,7 @@ export default function Backup() {
 
             if (result.success) {
                 setStatus('done')
-                addLog('done', `✨ Seeding Complete: ${result.summary.products} products, ${result.summary.categories} categories created.`)
+                addLog('done', `Seeding complete: ${result.summary.products} fabric products, ${result.summary.categories} categories, ${result.summary.customers} customers, ${result.summary.suppliers} suppliers, ${result.summary.sales || 5} sales, ${result.summary.cashFlowEntries || 5} cash flow entries added.`)
             } else {
                 setStatus('error')
                 addLog('error', `❌ Seeding Failed: ${result.error}`)
@@ -517,9 +517,9 @@ export default function Backup() {
                     <div className="p-5 flex flex-col md:flex-row items-center gap-5">
                         <div className="flex-1">
                             <p className="text-sm text-gray-600 leading-relaxed">
-                                Get started quickly by populating your business with <strong>5 sample products</strong>, categories, customers, 
-                                and <strong>staff accounts</strong>. This will also seed initial inventory and sample sales 
-                                across all your branches.
+                                Get started quickly by populating your business with <strong>10 fabric products</strong> (Lawn, Cotton, Silk, Denim, Linen, Velvet),
+                                6 categories, 5 customers (Pakistan + Thailand), 3 suppliers,
+                                and <strong>sample sales &amp; cash flow</strong> entries across all branches.
                             </p>
                         </div>
                         <div className="w-full md:w-auto">
