@@ -1,0 +1,54 @@
+# Dependencies
+node_modules/
+/.pnp
+.pnp.js
+
+# Environment Variables (NEVER commit this)
+.env
+.env.local
+.env.development          ← Yeh add karo
+.env.production           ← Yeh bhi add karo
+.env.development.local
+.env.test.local
+.env.production.local
+
+
+# Build Output
+dist/
+dev-dist/
+build/
+.firebase/
+
+# Firebase
+.firebase/
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+firebase.json
+.firebaserc
+firestore.rules
+/public/firebase-messaging-sw.js
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+logs/
+*.log
+
+# Editor
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Cache
+.cache/
+.eslintcache
