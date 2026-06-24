@@ -204,12 +204,15 @@ function Employees() {
 
     // FIX BUG 3: Added `name` parameter to handleDelete
     const handleDelete = async (uid, name) => {
-        if (!window.confirm(`Remove ${name} from team?`)) {  // ✅ Fixed: name now works
+        if (!window.confirm(`Remove ${name} from team?`)) {
             return
         }
         try {
             setLoading(true)
-            await deleteDoc(doc(db, 'business_users', businessId, uid, 'profile'))
+            await Promise.all([
+                deleteDoc(doc(db, 'business_users', businessId, uid, 'profile')),
+                deleteDoc(doc(db, 'users', uid)),
+            ])
             fetchApprovedEmployees()
             showSuccess('Employee removed')
         } catch (err) {

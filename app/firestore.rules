@@ -35,7 +35,22 @@ service cloud.firestore {
     // ─── Global User Mapping ──────────────────────────────────────────────────
     // users/{uid} — login pe businessId fetch karne ke liye
     match /users/{userId} {
-      allow read, write: if isAuth() && request.auth.uid == userId;
+      // Any authenticated user can read (needed for Employees list query by businessId)
+      allow read: if isAuth();
+
+      // User can write own doc; Admin can create/update/delete employees of their business
+      allow create: if isAuth() && (
+        request.auth.uid == userId ||
+        isAdmin(request.resource.data.businessId)
+      );
+      allow update: if isAuth() && (
+        request.auth.uid == userId ||
+        isAdmin(resource.data.businessId)
+      );
+      allow delete: if isAuth() && (
+        request.auth.uid == userId ||
+        isAdmin(resource.data.businessId)
+      );
     }
 
     // ─── Business Membership ──────────────────────────────────────────────────
