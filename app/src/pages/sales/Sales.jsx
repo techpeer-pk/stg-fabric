@@ -336,6 +336,12 @@ function Sales() {
                                                         onClick={() => window.open(`/invoice/${businessId}/${branchId}/${sale.id}`, '_blank')}
                                                         className="text-gray-600 dark:text-gray-400 hover:text-blue-600 font-black text-[10px] uppercase bg-gray-100 dark:bg-gray-800 px-2 py-1.5 rounded-lg border dark:border-gray-700 transition"
                                                     >📜 Receipt</button>
+                                                    {user?.role === 'owner' && (
+                                                        <button
+                                                            onClick={() => handleDelete(sale)}
+                                                            className="text-red-400 hover:text-red-600 font-black text-[10px] uppercase bg-red-50 dark:bg-red-900/10 px-2 py-1.5 rounded-lg border border-red-100 dark:border-red-900/20 transition"
+                                                        >🗑</button>
+                                                    )}
                                                 </div>
                                             </td>
                                         </tr>
