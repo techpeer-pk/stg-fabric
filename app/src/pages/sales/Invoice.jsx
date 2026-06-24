@@ -254,7 +254,7 @@ function Invoice() {
                     </div>
                 </div>
 
-                <div className="px-8 py-6">
+                <div className="px-8 py-6 flex flex-col min-h-[700px]">
 
                     {/* ── Company Info + Bill To ── */}
                     <div className="grid grid-cols-2 gap-8 mb-8">
@@ -290,7 +290,7 @@ function Invoice() {
                     </div>
 
                     {/* ── Items Table ── */}
-                    <div className="mb-8">
+                    <div className="mb-8 flex-1">
                         <table className="w-full text-sm">
                             <thead>
                                 <tr className="bg-gray-50 rounded-xl">
@@ -330,7 +330,7 @@ function Invoice() {
                     </div>
 
                     {/* ── Totals + QR ── */}
-                    <div className="flex justify-between items-end gap-8">
+                    <div className="flex justify-between items-end gap-8 mt-auto">
                         {/* QR Code */}
                         <div className="text-center">
                             <QRCodeCanvas
