@@ -69,6 +69,21 @@ function Sales() {
         init()
     }, [businessId, branchId])
 
+    const handleDelete = async (sale) => {
+        if (!window.confirm(`Delete sale ${sale.id?.slice(-5).toUpperCase()}? Yeh action undo nahi hoga.`)) return
+        setLoading(true)
+        try {
+            await FirestoreService.deleteSale(businessId, branchId, sale.id)
+            showSuccess('Sale deleted')
+            setSelected(null)
+            fetchSales()
+        } catch (err) {
+            handleError(err, 'Delete Sale', 'Failed to delete sale')
+        } finally {
+            setLoading(false)
+        }
+    }
+
     const handleReturn = async (sale) => {
         if (!window.confirm('Are you sure you want to return this entire sale? This will restore items to inventory.')) return
         setLoading(true)
@@ -473,6 +488,15 @@ function Sales() {
                                 className="w-full mt-8 bg-red-600 text-white py-3 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-red-700 transition shadow-lg shadow-red-500/20 disabled:opacity-50"
                             >
                                 🔄 Process Void Return
+                            </button>
+                        )}
+                        {user?.role === 'owner' && (
+                            <button
+                                onClick={() => handleDelete(selected)}
+                                disabled={loading}
+                                className="w-full mt-3 bg-gray-100 text-red-500 py-2.5 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-red-50 transition disabled:opacity-50 border border-red-100"
+                            >
+                                🗑 Delete Sale
                             </button>
                         )}
                     </div>
