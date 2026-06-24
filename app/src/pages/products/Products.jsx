@@ -44,6 +44,7 @@ function Products() {
         color: '',
         pcsPerBundle: '',
         initialStock: '',
+        description: '',
     })
     const [editingProduct, setEditingProduct] = useState(null)
     const [initialLoading, setInitialLoading] = useState(true)
@@ -126,7 +127,7 @@ function Products() {
                 lastUpdated: serverTimestamp()
             })
 
-            setForm({ name: '', price: '', costPrice: '', category: '', unit: 'bundle', barcode: '', color: '', pcsPerBundle: '', initialStock: '' })
+            setForm({ name: '', price: '', costPrice: '', category: '', unit: 'bundle', barcode: '', color: '', pcsPerBundle: '', initialStock: '', description: '' })
             setShowForm(false)
             showSuccess('Product added successfully')
             fetchProducts()
@@ -387,6 +388,16 @@ function Products() {
                                 placeholder="FAB barcode auto-generates on Barcode page"
                             />
                         </div>
+                        <div className="col-span-1 md:col-span-2">
+                            <label className="text-xs font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1 block">Description (optional)</label>
+                            <textarea
+                                value={form.description}
+                                onChange={(e) => setForm({ ...form, description: e.target.value })}
+                                className="w-full border dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all resize-none"
+                                placeholder="Product details, fabric type, quality grade..."
+                                rows={3}
+                            />
+                        </div>
                         <div className="col-span-1 md:col-span-2 flex gap-3 justify-end pt-4">
                             <button
                                 type="button"
@@ -500,6 +511,16 @@ function Products() {
                                     />
                                 </div>
                             )}
+                            <div className="col-span-1 md:col-span-2">
+                                <label className="text-xs font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1 block">Description (optional)</label>
+                                <textarea
+                                    value={editingProduct.description || ''}
+                                    onChange={(e) => setEditingProduct({ ...editingProduct, description: e.target.value })}
+                                    className="w-full border dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all resize-none"
+                                    placeholder="Product details, fabric type, quality grade..."
+                                    rows={3}
+                                />
+                            </div>
                             <div className="col-span-1 md:col-span-2 flex gap-3 justify-end mt-6">
                                 <button
                                     type="button"
