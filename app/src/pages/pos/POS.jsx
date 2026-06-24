@@ -1,4 +1,4 @@
-import { useState, useEffect, memo } from 'react'
+import { useState, useEffect, useRef, memo } from 'react'
 import Layout from '../../components/layout/Layout'
 import { SkeletonPOS } from '../../components/common/skeleton/Skeleton'
 import { auth } from '../../firebase/config'
@@ -212,6 +212,7 @@ function POS() {
     const { user, businessId, branchId } = useAuthStore()
 
     const [amountPaid, setAmountPaid] = useState('')
+    const searchInputRef = useRef(null)
 
     const currency = settings?.currency || 'PKR'
 
@@ -313,6 +314,7 @@ function POS() {
         setSuccess(false)
         setAmountPaid('')
         setMobileCartOpen(false)
+        setTimeout(() => searchInputRef.current?.focus(), 100)
     }
 
     const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0)
@@ -335,6 +337,8 @@ function POS() {
                 setBarcodeFlash(true)
                 setTimeout(() => setBarcodeFlash(false), 500)
             }
+            // Re-focus after scan so next scan works immediately
+            setTimeout(() => searchInputRef.current?.focus(), 50)
         }
     }
 
@@ -439,6 +443,7 @@ function POS() {
             setLastSaleData(finalSaleData)
             setMobileCartOpen(true)
             showSuccess('Sale completed successfully')
+            setTimeout(() => searchInputRef.current?.focus(), 200)
             setTimeout(() => setSuccess(false), 15000)
         } catch (err) {
             handleError(err, 'Process Sale', 'Failed to complete sale')
@@ -516,8 +521,10 @@ function POS() {
                 <div className="flex-1 lg:overflow-y-auto min-w-0">
                     <div className="flex gap-3 mb-4 pt-2">
                         <input
+                            ref={searchInputRef}
                             type="text"
-                            placeholder="🔍 Search by name or barcode..."
+                            autoFocus
+                            placeholder="🔍 Search or scan barcode..."
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
                             onKeyDown={handleBarcodeSearch}

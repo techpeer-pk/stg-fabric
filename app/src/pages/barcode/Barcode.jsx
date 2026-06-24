@@ -49,9 +49,19 @@ export default function Barcode() {
 
     const [barcodes, setBarcodes] = useState([])
     const [historyLoading, setHistoryLoading] = useState(false)
+    const [labelSize, setLabelSize] = useState('76x50')
+    const [labelRotate, setLabelRotate] = useState('0')
 
     const barcodeRef = useRef(null)
     const scannerRef = useRef(null)
+    const usbInputRef = useRef(null)
+
+    const LABEL_SIZES = [
+        { value: '76x50',  label: '3" × 2"  (76×50mm) — Default', w: '3in',   h: '2in',   bh: 45, bw: 0.8 },
+        { value: '50x25',  label: '2" × 1"  (50×25mm)',            w: '2in',   h: '1in',   bh: 28, bw: 0.7 },
+        { value: '38x25',  label: '1.5" × 1" (38×25mm)',           w: '1.5in', h: '1in',   bh: 25, bw: 0.6 },
+        { value: '100x50', label: '4" × 2"  (100×50mm)',           w: '4in',   h: '2in',   bh: 55, bw: 1   },
+    ]
 
     useEffect(() => {
         if (businessId) fetchProducts()
@@ -64,13 +74,16 @@ export default function Barcode() {
             scannerRef.current = null
             setScannerStarted(false)
         }
+        if (tab === 'scan') {
+            setTimeout(() => usbInputRef.current?.focus(), 100)
+        }
     }, [tab])
 
     useEffect(() => {
         if (barcodeId && barcodeRef.current) {
             try {
                 JsBarcode(barcodeRef.current, barcodeId, {
-                    format: 'CODE128',
+                    format: 'CODE39',
                     width: 2,
                     height: 60,
                     displayValue: true,
@@ -142,23 +155,154 @@ export default function Barcode() {
         }
     }
 
-    const handlePrint = () => {
-        const svg = barcodeRef.current
-        if (!svg) return
+    const printLabel = (code, productName) => {
+        if (!code) return
+        const size = LABEL_SIZES.find(s => s.value === labelSize) || LABEL_SIZES[0]
+        const rot = parseInt(labelRotate) || 0
+
+        // For 90/270 deg, swap page dimensions so paper orientation matches
+        const isSwapped = rot === 90 || rot === 270
+        const pageW = isSwapped ? size.h : size.w
+        const pageH = isSwapped ? size.w : size.h
+
+        // CSS transform: rotate around center, then translate to keep content on page
+        const rotateStyle = rot === 0 ? '' : `
+            transform: rotate(${rot}deg);
+            transform-origin: center center;
+            ${isSwapped ? `width: ${size.w}; height: ${size.h}; margin-left: -${size.w === size.h ? '0' : 'auto'};` : ''}
+        `
+
+        const tempSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
+        document.body.appendChild(tempSvg)
+        try {
+            JsBarcode(tempSvg, code, {
+                format: 'CODE39',
+                width: size.bw,
+                height: size.bh,
+                displayValue: true,
+                fontSize: 9,
+                margin: 2,
+            })
+        } catch (_) {}
+        const svgHtml = tempSvg.outerHTML
+        document.body.removeChild(tempSvg)
+
         const printWindow = window.open('', '_blank')
         printWindow.document.write(`
-            <html><head><title>Barcode - ${barcodeId}</title>
-            <style>body{display:flex;justify-content:center;padding:20px;font-family:sans-serif;}
-            .label{border:1px solid #ccc;padding:16px;text-align:center;width:240px;}
-            h3{margin:0 0 8px;font-size:14px;}p{margin:4px 0;font-size:12px;color:#555;}</style>
-            </head><body>
-            <div class="label">
-                <h3>Fabric POS</h3>
-                ${svg.outerHTML}
-                <p>${products.find(p => p.id === selectedProduct)?.name || ''}</p>
-            </div>
-            <script>window.onload=()=>{window.print();window.close()}</script>
-            </body></html>
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Barcode - ${code}</title>
+                <style>
+                    @page { size: ${pageW} ${pageH}; margin: 0; }
+                    * { box-sizing: border-box; margin: 0; padding: 0; }
+                    body {
+                        width: ${pageW};
+                        height: ${pageH};
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        font-family: Arial, sans-serif;
+                        overflow: hidden;
+                    }
+                    .label {
+                        width: ${size.w};
+                        height: ${size.h};
+                        display: flex;
+                        flex-direction: column;
+                        align-items: center;
+                        justify-content: center;
+                        padding: 2mm;
+                        text-align: center;
+                        gap: 1mm;
+                        ${rotateStyle}
+                    }
+                    .biz { font-size: 9pt; font-weight: bold; letter-spacing: 1px; }
+                    .label svg { display: block; }
+                    .product-name {
+                        font-size: 8pt;
+                        font-weight: bold;
+                        max-width: 100%;
+                        overflow: hidden;
+                        white-space: nowrap;
+                        text-overflow: ellipsis;
+                    }
+                    .barcode-id { font-size: 7pt; color: #555; }
+                </style>
+            </head>
+            <body>
+                <div class="label">
+                    <div class="biz">STG FABRIC POS</div>
+                    ${svgHtml}
+                    <div class="product-name">${productName || ''}</div>
+                    <div class="barcode-id">${code}</div>
+                </div>
+                <script>window.onload = () => { window.print(); window.close(); }</script>
+            </body>
+            </html>
+        `)
+        printWindow.document.close()
+    }
+
+    const handlePrint = () => {
+        const productName = products.find(p => p.id === selectedProduct)?.name || ''
+        printLabel(barcodeId, productName)
+    }
+
+    const handleTestPrint = () => {
+        const size = LABEL_SIZES.find(s => s.value === labelSize) || LABEL_SIZES[0]
+        const printWindow = window.open('', '_blank')
+        printWindow.document.write(`
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Test Label</title>
+                <style>
+                    @page { size: ${size.w} ${size.h}; margin: 0; }
+                    * { box-sizing: border-box; margin: 0; padding: 0; }
+                    body {
+                        width: ${size.w};
+                        height: ${size.h};
+                        font-family: Arial, sans-serif;
+                        overflow: hidden;
+                    }
+                    .label {
+                        width: 100%;
+                        height: 100%;
+                        border: 1px solid #000;
+                        display: flex;
+                        flex-direction: column;
+                        align-items: center;
+                        justify-content: center;
+                        padding: 1mm;
+                        text-align: center;
+                        gap: 1mm;
+                    }
+                    .title { font-size: 8pt; font-weight: bold; }
+                    .size  { font-size: 7pt; color: #333; }
+                    .line  { width: 90%; border-top: 1px dashed #999; }
+                    .corner-tl { position:absolute; top:0; left:0; font-size:5pt; }
+                    .corner-tr { position:absolute; top:0; right:0; font-size:5pt; }
+                    .corner-bl { position:absolute; bottom:0; left:0; font-size:5pt; }
+                    .corner-br { position:absolute; bottom:0; right:0; font-size:5pt; }
+                </style>
+            </head>
+            <body>
+                <div class="label" style="position:relative;">
+                    <span class="corner-tl">▪</span>
+                    <span class="corner-tr">▪</span>
+                    <span class="corner-bl">▪</span>
+                    <span class="corner-br">▪</span>
+                    <p class="title">ALIGNMENT TEST</p>
+                    <div class="line"></div>
+                    <p class="size">${size.w} × ${size.h}</p>
+                    <p class="size">${size.label}</p>
+                    <div class="line"></div>
+                    <p class="size">Fabric POS</p>
+                </div>
+                <script>window.onload = () => { window.print(); window.close(); }</script>
+            </body>
+            </html>
         `)
         printWindow.document.close()
     }
@@ -197,11 +341,6 @@ export default function Barcode() {
         }
     }
 
-    const handleManualLookup = (e) => {
-        e.preventDefault()
-        const val = e.target.elements.manualCode.value.trim()
-        if (val) lookupBarcode(val)
-    }
 
     const handleStageUpdate = async () => {
         if (!newStage || !scanResult) return
@@ -263,6 +402,42 @@ export default function Barcode() {
                         {t.label}
                     </button>
                 ))}
+            </div>
+
+            {/* ── Print Settings Bar (visible on all tabs) ── */}
+            <div className="flex flex-wrap items-center gap-3 mb-4 p-3 bg-white dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm">
+                <span className="text-xs font-black text-gray-400 uppercase tracking-widest">🖨️ Print Settings:</span>
+                <div className="flex items-center gap-2">
+                    <label className="text-xs text-gray-500 font-bold">Size</label>
+                    <select
+                        value={labelSize}
+                        onChange={e => setLabelSize(e.target.value)}
+                        className="border dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                        {LABEL_SIZES.map(s => (
+                            <option key={s.value} value={s.value}>{s.label}</option>
+                        ))}
+                    </select>
+                </div>
+                <div className="flex items-center gap-2">
+                    <label className="text-xs text-gray-500 font-bold">Rotate</label>
+                    <select
+                        value={labelRotate}
+                        onChange={e => setLabelRotate(e.target.value)}
+                        className="border dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                        <option value="0">0° Normal</option>
+                        <option value="90">90° ↻</option>
+                        <option value="180">180° ↕</option>
+                        <option value="270">270° ↺</option>
+                    </select>
+                </div>
+                <button
+                    onClick={handleTestPrint}
+                    className="bg-yellow-500 text-white px-3 py-1.5 rounded-lg font-bold hover:bg-yellow-600 transition text-xs"
+                >
+                    🧪 Test
+                </button>
             </div>
 
             {/* ── TAB: Generate ── */}
@@ -331,9 +506,10 @@ export default function Barcode() {
                                 </div>
                                 <button
                                     onClick={handlePrint}
-                                    className="mt-4 w-full bg-gray-800 text-white py-2.5 rounded-xl font-bold hover:bg-gray-700 transition"
+                                    disabled={!barcodeId}
+                                    className="mt-4 w-full bg-gray-800 text-white py-2.5 rounded-xl font-bold hover:bg-gray-700 transition disabled:opacity-40"
                                 >
-                                    Print Label
+                                    🖨️ Print Label
                                 </button>
                             </>
                         ) : (
@@ -350,32 +526,49 @@ export default function Barcode() {
             {tab === 'scan' && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-gray-800">
-                        <h3 className="text-lg font-bold text-gray-800 dark:text-gray-100 mb-4">Scan Barcode</h3>
+                        <h3 className="text-lg font-bold text-gray-800 dark:text-gray-100 mb-1">Scan Barcode</h3>
+                        <p className="text-xs text-gray-400 mb-4">USB scanner ya manually type karo</p>
 
-                        {!scannerStarted && (
-                            <button
-                                onClick={startScanner}
-                                className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 mb-4 shadow-lg shadow-blue-500/20"
-                            >
-                                Camera se Scan Karo
-                            </button>
-                        )}
-                        <div id="qr-reader" className="w-full rounded-xl overflow-hidden" />
-
-                        <div className="mt-4 border-t dark:border-gray-800 pt-4">
-                            <p className="text-xs text-gray-500 uppercase font-bold tracking-widest mb-2">Ya Manual Type Karo</p>
-                            <form onSubmit={handleManualLookup} className="flex gap-2">
-                                <input
-                                    name="manualCode"
-                                    placeholder="FAB-2026-XXXXX"
-                                    className="flex-1 border dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                />
-                                <button type="submit" className="px-4 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700">
-                                    Search
-                                </button>
-                            </form>
+                        {/* USB Scanner Input — auto focused */}
+                        <div className="relative mb-4">
+                            <div className="absolute left-3 top-1/2 -translate-y-1/2 text-2xl pointer-events-none">📷</div>
+                            <input
+                                ref={usbInputRef}
+                                type="text"
+                                placeholder="Scanner se scan karo ya barcode type karo..."
+                                className="w-full pl-12 pr-4 py-3 border-2 border-blue-500 dark:border-blue-400 bg-blue-50 dark:bg-blue-900/20 text-gray-800 dark:text-gray-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm"
+                                onKeyDown={e => {
+                                    if (e.key === 'Enter') {
+                                        const val = e.target.value.trim()
+                                        if (val) {
+                                            lookupBarcode(val)
+                                            e.target.value = ''
+                                        }
+                                    }
+                                }}
+                                onClick={e => e.target.select()}
+                            />
                         </div>
-                        {scanError && <p className="mt-3 text-red-500 text-sm">{scanError}</p>}
+
+                        {scanError && (
+                            <div className="mb-4 px-4 py-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl text-red-600 dark:text-red-400 text-sm font-bold">
+                                ❌ {scanError}
+                            </div>
+                        )}
+
+                        {/* Camera Scanner (optional) */}
+                        <div className="border-t dark:border-gray-800 pt-4">
+                            <p className="text-xs text-gray-400 uppercase font-bold tracking-widest mb-2">Ya Camera Use Karo</p>
+                            {!scannerStarted && (
+                                <button
+                                    onClick={startScanner}
+                                    className="w-full bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 py-2.5 rounded-xl font-bold hover:bg-gray-200 dark:hover:bg-gray-700 transition text-sm border dark:border-gray-700"
+                                >
+                                    📸 Camera se Scan Karo
+                                </button>
+                            )}
+                            <div id="qr-reader" className="w-full rounded-xl overflow-hidden mt-2" />
+                        </div>
                     </div>
 
                     {/* Scan Result */}
@@ -399,6 +592,16 @@ export default function Barcode() {
                                     <div><p className="text-gray-400 text-xs">Color</p><p className="font-bold dark:text-gray-100">{scanResult.color || '-'}</p></div>
                                     {scanResult.fabricType && <div><p className="text-gray-400 text-xs">Fabric</p><p className="font-bold dark:text-gray-100">{scanResult.fabricType}</p></div>}
                                     {scanResult.width && <div><p className="text-gray-400 text-xs">Width</p><p className="font-bold dark:text-gray-100">{scanResult.width}"</p></div>}
+                                </div>
+
+                                {/* Reprint */}
+                                <div className="mb-4">
+                                    <button
+                                        onClick={() => printLabel(scanResult.barcodeId, scanResult.productName)}
+                                        className="w-full bg-gray-800 text-white py-2 rounded-xl font-bold hover:bg-gray-700 transition text-sm"
+                                    >
+                                        🖨️ Reprint Label
+                                    </button>
                                 </div>
 
                                 {/* Update Stage */}
@@ -468,23 +671,31 @@ export default function Barcode() {
                                     <th className="px-4 py-3 text-left">Roll / Qty</th>
                                     <th className="px-4 py-3 text-left">Color</th>
                                     <th className="px-4 py-3 text-left">Stage</th>
+                                    <th className="px-4 py-3 text-left">Print</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
                                 {barcodes.map(b => (
                                     <tr
                                         key={b.id}
-                                        className="hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-pointer transition"
-                                        onClick={() => { setScanResult(b); setTab('scan') }}
+                                        className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition"
                                     >
-                                        <td className="px-4 py-3 font-mono text-blue-600 font-bold">{b.barcodeId}</td>
-                                        <td className="px-4 py-3 dark:text-gray-200">{b.productName}</td>
-                                        <td className="px-4 py-3 dark:text-gray-300">{b.rollNo} · {b.quantity} {b.unit}</td>
-                                        <td className="px-4 py-3 dark:text-gray-300">{b.color || '-'}</td>
-                                        <td className="px-4 py-3">
+                                        <td className="px-4 py-3 font-mono text-blue-600 font-bold cursor-pointer" onClick={() => { setScanResult(b); setTab('scan') }}>{b.barcodeId}</td>
+                                        <td className="px-4 py-3 dark:text-gray-200 cursor-pointer" onClick={() => { setScanResult(b); setTab('scan') }}>{b.productName}</td>
+                                        <td className="px-4 py-3 dark:text-gray-300 cursor-pointer" onClick={() => { setScanResult(b); setTab('scan') }}>{b.rollNo} · {b.quantity} {b.unit}</td>
+                                        <td className="px-4 py-3 dark:text-gray-300 cursor-pointer" onClick={() => { setScanResult(b); setTab('scan') }}>{b.color || '-'}</td>
+                                        <td className="px-4 py-3 cursor-pointer" onClick={() => { setScanResult(b); setTab('scan') }}>
                                             <span className={`px-2 py-1 rounded-full text-xs font-bold ${getStageStyle(b.currentStage)}`}>
                                                 {getStageLabel(b.currentStage)}
                                             </span>
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            <button
+                                                onClick={() => printLabel(b.barcodeId, b.productName)}
+                                                className="px-3 py-1 bg-gray-800 text-white rounded-lg text-xs font-bold hover:bg-gray-700 transition"
+                                            >
+                                                🖨️ Print
+                                            </button>
                                         </td>
                                     </tr>
                                 ))}

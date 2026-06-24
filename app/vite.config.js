@@ -2,58 +2,77 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
-// https://vite.dev/config/
 export default defineConfig({
   plugins: [
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      devOptions: {
-        enabled: false
-      },
-      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg', 'vite.svg'],
+      devOptions: { enabled: false },
+      includeAssets: ['stg_logo.jpeg', 'favicon.ico'],
       manifest: {
-        name: 'GPOS - Point of Sale',
-        short_name: 'GPOS',
-        description: 'Advanced Point of Sale System with Offline Support',
+        name: 'Fabric POS — STG',
+        short_name: 'Fabric POS',
+        description: 'Fabric Factory Management System',
         theme_color: '#2563eb',
         background_color: '#ffffff',
         display: 'standalone',
         icons: [
           {
-            src: '/vite.svg',
+            src: '/stg_logo.jpeg',
             sizes: 'any',
-            type: 'image/svg+xml',
+            type: 'image/jpeg',
             purpose: 'any'
           }
-          // {
-          //   src: '/pwa-192x192.png',
-          //   sizes: '192x192',
-          //   type: 'image/png',
-          //   purpose: 'any'
-          // },
-          // {
-          //   src: '/pwa-512x512.png',
-          //   sizes: '512x512',
-          //   type: 'image/png',
-          //   purpose: 'any'
-          // },
-          // {
-          //   src: '/pwa-512x512.png',
-          //   sizes: '512x512',
-          //   type: 'image/png',
-          //   purpose: 'maskable'
-          // }
         ]
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
-        maximumFileSizeToCacheInBytes: 3000000,
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,jpeg}'],
+        maximumFileSizeToCacheInBytes: 4000000,
+        // Don't cache Firebase realtime channels
+        navigateFallbackDenylist: [/^\/__\//],
         runtimeCaching: [
-          // Firestore long-lived connections should stay on the network
-          // to avoid service worker promise rejections on streaming channels.
+          {
+            urlPattern: /^https:\/\/firestore\.googleapis\.com\/.*/i,
+            handler: 'NetworkOnly',
+          },
+          {
+            urlPattern: /^https:\/\/fonts\.(googleapis|gstatic)\.com\/.*/i,
+            handler: 'CacheFirst',
+            options: { cacheName: 'google-fonts', expiration: { maxEntries: 10, maxAgeSeconds: 60 * 60 * 24 * 365 } }
+          }
         ]
       }
     })
   ],
+
+  build: {
+    target: 'es2020',
+    minify: 'esbuild',       // faster than terser
+    sourcemap: false,         // no sourcemaps in production
+    chunkSizeWarningLimit: 600,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // Core React
+          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+          // Firebase — split from app code (large, but cached long-term)
+          'vendor-firebase': [
+            'firebase/app',
+            'firebase/auth',
+            'firebase/firestore',
+            'firebase/storage',
+            'firebase/messaging'
+          ],
+          // UI libraries
+          'vendor-ui': ['lucide-react', 'react-hot-toast'],
+          // Charts (recharts is ~400KB alone)
+          'vendor-charts': ['recharts'],
+        }
+      }
+    }
+  },
+
+  optimizeDeps: {
+    include: ['react', 'react-dom', 'react-router-dom', 'firebase/app', 'firebase/auth', 'firebase/firestore']
+  }
 })

@@ -119,6 +119,84 @@ function Invoice() {
     const discount = sale.discount || 0
     const total = sale.finalAmount || sale.total || subtotal
 
+    const handleThermalPrint = () => {
+        const currency = sale.currency || settings?.currency || 'PKR'
+        const subtotalAmt = sale.subtotal || sale.items?.reduce((s, i) => s + (i.total || 0), 0) || 0
+        const taxAmt = sale.tax || 0
+        const discountAmt = sale.discount || 0
+        const totalAmt = sale.finalAmount || sale.total || subtotalAmt
+        const dateStr = formatDate(sale.createdAt)
+        const invoiceNo = getInvoiceNo(sale.id)
+
+        const itemRows = (sale.items || []).map(item => `
+            <tr>
+                <td style="padding:2px 0;font-size:10pt;">${item.name}</td>
+                <td style="padding:2px 0;font-size:10pt;text-align:center;">${item.quantity}</td>
+                <td style="padding:2px 0;font-size:10pt;text-align:right;">${(item.total || 0).toFixed(0)}</td>
+            </tr>
+        `).join('')
+
+        const printWindow = window.open('', '_blank')
+        printWindow.document.write(`
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>${invoiceNo}</title>
+                <style>
+                    @page { size: 80mm auto; margin: 4mm 3mm; }
+                    * { box-sizing: border-box; margin: 0; padding: 0; }
+                    body { font-family: 'Courier New', monospace; font-size: 10pt; width: 74mm; color: #000; }
+                    .center { text-align: center; }
+                    .bold { font-weight: bold; }
+                    .divider { border-top: 1px dashed #000; margin: 4px 0; }
+                    .biz-name { font-size: 13pt; font-weight: bold; text-align: center; }
+                    .sub { font-size: 9pt; text-align: center; }
+                    table { width: 100%; border-collapse: collapse; }
+                    th { font-size: 9pt; border-bottom: 1px solid #000; padding: 2px 0; text-align: left; }
+                    th:nth-child(2) { text-align: center; }
+                    th:last-child { text-align: right; }
+                    .total-row td { font-weight: bold; font-size: 11pt; padding-top: 3px; }
+                    .total-row td:last-child { text-align: right; }
+                    .footer { font-size: 9pt; text-align: center; margin-top: 6px; }
+                </style>
+            </head>
+            <body>
+                <p class="biz-name">${settings?.businessName || 'Fabric POS'}</p>
+                ${settings?.address ? `<p class="sub">${settings.address}</p>` : ''}
+                ${settings?.phone ? `<p class="sub">Tel: ${settings.phone}</p>` : ''}
+                <div class="divider"></div>
+                <p class="sub">${invoiceNo} &nbsp;|&nbsp; ${dateStr}</p>
+                <p class="sub">Customer: ${sale.customerName || 'Walk-in'}</p>
+                <p class="sub">Payment: ${(sale.paymentMethod || '').toUpperCase()}</p>
+                <div class="divider"></div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Item</th>
+                            <th style="text-align:center;">Qty</th>
+                            <th style="text-align:right;">Amt</th>
+                        </tr>
+                    </thead>
+                    <tbody>${itemRows}</tbody>
+                </table>
+                <div class="divider"></div>
+                <table>
+                    <tr><td>Subtotal</td><td style="text-align:right;">${currency} ${subtotalAmt.toFixed(0)}</td></tr>
+                    ${taxAmt > 0 ? `<tr><td>${settings?.taxLabel || 'Tax'}</td><td style="text-align:right;">${currency} ${taxAmt.toFixed(0)}</td></tr>` : ''}
+                    ${discountAmt > 0 ? `<tr><td>Discount</td><td style="text-align:right;">- ${currency} ${discountAmt.toFixed(0)}</td></tr>` : ''}
+                    <tr class="total-row"><td>TOTAL</td><td style="text-align:right;">${currency} ${totalAmt.toFixed(0)}</td></tr>
+                    ${sale.paymentMethod === 'cash' && (sale.change || 0) > 0 ? `<tr><td>Change</td><td style="text-align:right;">${currency} ${(sale.change || 0).toFixed(0)}</td></tr>` : ''}
+                </table>
+                <div class="divider"></div>
+                <p class="footer">${settings?.receiptFooter || 'Thank you!'}</p>
+                <p class="footer" style="font-size:8pt;margin-top:4px;">${invoiceNo}</p>
+                <script>window.onload = () => { window.print(); window.close(); }</script>
+            </body>
+            </html>
+        `)
+        printWindow.document.close()
+    }
+
     return (
         <div className="min-h-screen bg-gray-100 py-8 px-4 print:bg-white print:py-0 print:px-0">
 
@@ -134,8 +212,11 @@ function Invoice() {
                         </span>
                     </div>
                     <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex flex-wrap gap-2 justify-center">
+                        <button onClick={handleThermalPrint} className="flex items-center gap-2 px-4 py-2 bg-orange-50 hover:bg-orange-100 text-orange-600 rounded-xl font-bold text-sm transition">
+                            <Printer size={15} /> Thermal
+                        </button>
                         <button onClick={() => window.print()} className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-bold text-sm transition">
-                            <Printer size={15} /> Print
+                            <Printer size={15} /> A4 Print
                         </button>
                         <button onClick={downloadPDF} className="flex items-center gap-2 px-4 py-2 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-xl font-bold text-sm transition">
                             <FileDown size={15} /> PDF
