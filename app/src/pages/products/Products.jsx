@@ -9,6 +9,17 @@ import { Search, X, ChevronsUpDown, ChevronUp, ChevronDown, Plus } from 'lucide-
 
 const ROWS_OPTIONS = [10, 25, 50, 100]
 
+const UNIT_OPTIONS = [
+    { value: 'bundle', label: 'Bundle' },
+    { value: 'pcs',    label: 'Pieces (pcs)' },
+    { value: 'kg',     label: 'Kilogram (kg)' },
+    { value: 'meters', label: 'Meters' },
+    { value: 'yards',  label: 'Yards' },
+    { value: 'roll',   label: 'Roll' },
+    { value: 'ltr',    label: 'Liter (ltr)' },
+    { value: 'box',    label: 'Box' },
+]
+
 function SortIcon({ col, sortCol, sortDir }) {
     if (sortCol !== col) return <ChevronsUpDown size={12} className="ml-1 opacity-30 inline" />
     return sortDir === 'asc'
@@ -28,11 +39,11 @@ function Products() {
         price: '',
         costPrice: '',
         category: '',
-        unit: 'meters',
+        unit: 'bundle',
         barcode: '',
         color: '',
-        fabricType: '',
-        width: '',
+        pcsPerBundle: '',
+        initialStock: '',
     })
     const [editingProduct, setEditingProduct] = useState(null)
     const [initialLoading, setInitialLoading] = useState(true)
@@ -96,26 +107,26 @@ function Products() {
         e.preventDefault()
         setLoading(true)
         try {
+            const { initialStock, pcsPerBundle, ...rest } = form
             const productData = {
-                ...form,
+                ...rest,
                 price: parseFloat(form.price),
-                costPrice: parseFloat(form.costPrice),
+                costPrice: parseFloat(form.costPrice) || 0,
+                ...(pcsPerBundle ? { pcsPerBundle: parseInt(pcsPerBundle) } : {}),
                 active: true,
                 createdAt: serverTimestamp()
             }
 
-            // Use hierarchical API
             const docRef = await FirestoreService.addProduct(businessId, productData)
 
-            // Auto-create inventory record for this branch (and keep it simple for now)
             await FirestoreService.addInventory(businessId, branchId, docRef.id, {
                 productId: docRef.id,
-                quantity: 0,
+                quantity: parseFloat(initialStock) || 0,
                 reorderLevel: 10,
                 lastUpdated: serverTimestamp()
             })
 
-            setForm({ name: '', price: '', costPrice: '', category: '', unit: 'meters', barcode: '', color: '', fabricType: '', width: '' })
+            setForm({ name: '', price: '', costPrice: '', category: '', unit: 'bundle', barcode: '', color: '', pcsPerBundle: '', initialStock: '' })
             setShowForm(false)
             showSuccess('Product added successfully')
             fetchProducts()
@@ -322,66 +333,58 @@ function Products() {
                             />
                         </div>
                         <div>
-                            <label className="text-xs font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1 block">Barcode</label>
-                            <input
-                                type="text"
-                                value={form.barcode}
-                                onChange={(e) => setForm({ ...form, barcode: e.target.value })}
-                                className="w-full border dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-                                placeholder="Scan or type barcode"
-                            />
-                        </div>
-                        <div>
                             <label className="text-xs font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1 block">Unit</label>
                             <select
                                 value={form.unit}
                                 onChange={(e) => setForm({ ...form, unit: e.target.value })}
                                 className="w-full border dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
                             >
-                                <option value="meters">Meters</option>
-                                <option value="yards">Yards</option>
-                                <option value="roll">Roll</option>
-                                <option value="pcs">Pieces (pcs)</option>
-                                <option value="kg">Kilogram (kg)</option>
+                                {UNIT_OPTIONS.map(u => <option key={u.value} value={u.value}>{u.label}</option>)}
                             </select>
                         </div>
                         <div>
-                            <label className="text-xs font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1 block">Fabric Type</label>
-                            <select
-                                value={form.fabricType}
-                                onChange={(e) => setForm({ ...form, fabricType: e.target.value })}
+                            <label className="text-xs font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1 block">Initial Stock *</label>
+                            <input
+                                type="number"
+                                required
+                                value={form.initialStock}
+                                onChange={(e) => setForm({ ...form, initialStock: e.target.value })}
                                 className="w-full border dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-                            >
-                                <option value="">Select Type</option>
-                                <option value="Cotton">Cotton</option>
-                                <option value="Polyester">Polyester</option>
-                                <option value="Lawn">Lawn</option>
-                                <option value="Silk">Silk</option>
-                                <option value="Linen">Linen</option>
-                                <option value="Chiffon">Chiffon</option>
-                                <option value="Denim">Denim</option>
-                                <option value="Wool">Wool</option>
-                                <option value="Other">Other</option>
-                            </select>
+                                placeholder={`e.g. 108 ${form.unit}`}
+                                min="0"
+                            />
                         </div>
+                        {form.unit === 'bundle' && (
+                            <div>
+                                <label className="text-xs font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1 block">Pcs per Bundle</label>
+                                <input
+                                    type="number"
+                                    value={form.pcsPerBundle}
+                                    onChange={(e) => setForm({ ...form, pcsPerBundle: e.target.value })}
+                                    className="w-full border dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                                    placeholder="e.g. 200"
+                                    min="1"
+                                />
+                            </div>
+                        )}
                         <div>
-                            <label className="text-xs font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1 block">Color</label>
+                            <label className="text-xs font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1 block">Color / Variant</label>
                             <input
                                 type="text"
                                 value={form.color}
                                 onChange={(e) => setForm({ ...form, color: e.target.value })}
                                 className="w-full border dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-                                placeholder="e.g. White, Blue, Red"
+                                placeholder="e.g. Black, White, Mixed"
                             />
                         </div>
                         <div>
-                            <label className="text-xs font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1 block">Width (inches)</label>
+                            <label className="text-xs font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1 block">Barcode (optional)</label>
                             <input
                                 type="text"
-                                value={form.width}
-                                onChange={(e) => setForm({ ...form, width: e.target.value })}
+                                value={form.barcode}
+                                onChange={(e) => setForm({ ...form, barcode: e.target.value })}
                                 className="w-full border dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-                                placeholder="e.g. 44, 58"
+                                placeholder="FAB barcode auto-generates on Barcode page"
                             />
                         </div>
                         <div className="col-span-1 md:col-span-2 flex gap-3 justify-end pt-4">
@@ -481,12 +484,22 @@ function Products() {
                                     onChange={(e) => setEditingProduct({ ...editingProduct, unit: e.target.value })}
                                     className="w-full border dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
                                 >
-                                    <option value="pcs">Pieces (pcs)</option>
-                                    <option value="kg">Kilogram (kg)</option>
-                                    <option value="ltr">Liter (ltr)</option>
-                                    <option value="box">Box</option>
+                                    {UNIT_OPTIONS.map(u => <option key={u.value} value={u.value}>{u.label}</option>)}
                                 </select>
                             </div>
+                            {editingProduct.unit === 'bundle' && (
+                                <div>
+                                    <label className="text-xs font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1 block">Pcs per Bundle</label>
+                                    <input
+                                        type="number"
+                                        value={editingProduct.pcsPerBundle || ''}
+                                        onChange={(e) => setEditingProduct({ ...editingProduct, pcsPerBundle: e.target.value })}
+                                        className="w-full border dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                                        placeholder="e.g. 200"
+                                        min="1"
+                                    />
+                                </div>
+                            )}
                             <div className="col-span-1 md:col-span-2 flex gap-3 justify-end mt-6">
                                 <button
                                     type="button"
@@ -598,8 +611,11 @@ function Products() {
                                         </td>
                                         <td className="px-4 py-3">
                                             <span className={`px-2 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-widest inline-block w-fit ${product.stock <= 5 ? 'bg-red-50 dark:bg-red-900/20 text-red-500' : 'bg-green-50 dark:bg-green-900/20 text-green-500'}`}>
-                                                {product.stock} {product.unit} Available
+                                                {product.stock} {product.unit}
                                             </span>
+                                            {product.unit === 'bundle' && product.pcsPerBundle && (
+                                                <p className="text-[10px] text-gray-400 mt-0.5">{(product.stock * product.pcsPerBundle).toLocaleString()} pcs</p>
+                                            )}
                                         </td>
                                         <td className="px-4 py-3">
                                             <div className="flex gap-4">
@@ -607,6 +623,10 @@ function Products() {
                                                     onClick={() => setEditingProduct(product)}
                                                     className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 text-xs font-black uppercase tracking-widest"
                                                 >Edit</button>
+                                                <button
+                                                    onClick={() => window.location.href = `/barcode?product=${product.id}`}
+                                                    className="text-purple-600 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-300 text-xs font-black uppercase tracking-widest"
+                                                >Barcode</button>
                                                 <button
                                                     onClick={() => window.location.href = '/inventory'}
                                                     className="text-green-600 dark:text-green-400 hover:text-green-800 dark:hover:text-green-300 text-xs font-black uppercase tracking-widest"

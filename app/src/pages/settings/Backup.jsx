@@ -328,6 +328,66 @@ export default function Backup() {
         }
     }
 
+    // ── Clear All Data ───────────────────────────────────────────────────────
+    async function startClearData() {
+        const typed = window.prompt(
+            'WARNING: Yeh sab data delete karega (users nahi).\n\nConfirm karne ke liye "DELETE" type karo:'
+        )
+        if (typed !== 'DELETE') {
+            if (typed !== null) alert('Cancel. "DELETE" match nahi hua.')
+            return
+        }
+
+        setRunning(true)
+        resetLog()
+        addLog('warn', '🗑️ Clearing all data — users preserved...')
+
+        const BUSINESS_COLS = ['products', 'categories', 'customers', 'suppliers', 'barcodes']
+        const BRANCH_COLS   = ['inventory', 'sales', 'sales_returns', 'purchase_orders',
+                               'expenses', 'cash_flow', 'reconciliations', 'suspended_sales']
+
+        try {
+            const branchesSnap = await getDocs(collection(db, 'businesses', businessId, 'branches'))
+            addLog('info', `${branchesSnap.size} branch(es) found`)
+
+            for (const branchDoc of branchesSnap.docs) {
+                const bId = branchDoc.id
+                addLog('info', `Branch: ${bId}`)
+                for (const colId of BRANCH_COLS) {
+                    const colRef = collection(db, 'businesses', businessId, 'branches', bId, colId)
+                    const snap = await getDocs(colRef)
+                    if (snap.empty) continue
+                    for (let i = 0; i < snap.docs.length; i += BATCH_SIZE) {
+                        const batch = writeBatch(db)
+                        snap.docs.slice(i, i + BATCH_SIZE).forEach(d => batch.delete(d.ref))
+                        await batch.commit()
+                    }
+                    addLog('ok', `  ✅ ${colId}: ${snap.size} deleted`)
+                }
+            }
+
+            for (const colId of BUSINESS_COLS) {
+                const colRef = collection(db, 'businesses', businessId, colId)
+                const snap = await getDocs(colRef)
+                if (snap.empty) { addLog('info', `  ↷ ${colId}: empty`); continue }
+                for (let i = 0; i < snap.docs.length; i += BATCH_SIZE) {
+                    const batch = writeBatch(db)
+                    snap.docs.slice(i, i + BATCH_SIZE).forEach(d => batch.delete(d.ref))
+                    await batch.commit()
+                }
+                addLog('ok', `  ✅ ${colId}: ${snap.size} deleted`)
+            }
+
+            addLog('done', '🎉 Data cleared! Users & business settings preserved.')
+            setStatus('done')
+        } catch (err) {
+            addLog('error', '❌ Clear failed: ' + err.message)
+            setStatus('error')
+        } finally {
+            setRunning(false)
+        }
+    }
+
     // ── Re-download from history ──────────────────────────────────────────────
     function reDownload(item) {
         const blob = new Blob([item.data], { type: 'application/json' })
@@ -529,6 +589,34 @@ export default function Backup() {
                                 className="w-full md:w-48 py-2.5 rounded-xl bg-purple-600 text-white text-sm font-semibold hover:bg-purple-700 disabled:opacity-40 transition shadow-sm"
                             >
                                 {running ? '⏳ Seeding...' : '🧪 Seed Test Data'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                {/* ── CLEAR DATA ───────────────────────────────────────── */}
+                <div className="bg-white border border-red-200 rounded-xl overflow-hidden shadow-sm mb-6">
+                    <div className="bg-red-600 px-5 py-3 flex items-center justify-between">
+                        <div>
+                            <h2 className="text-white font-bold text-sm uppercase tracking-widest">🗑️ Clear All Data</h2>
+                            <p className="text-red-100 text-xs mt-0.5">Products, sales, inventory, customers — users will be kept</p>
+                        </div>
+                        <span className="bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-tighter border border-red-400">DANGER</span>
+                    </div>
+                    <div className="p-5 flex flex-col md:flex-row items-center gap-5">
+                        <div className="flex-1">
+                            <p className="text-sm text-gray-600 leading-relaxed">
+                                Sab dummy/test data delete karega — products, categories, customers, suppliers, barcodes, sales, inventory, expenses, cash flow.
+                                <strong className="text-red-600"> Users aur business settings nahi delete honge.</strong>
+                            </p>
+                        </div>
+                        <div className="w-full md:w-auto">
+                            <button
+                                onClick={startClearData}
+                                disabled={running}
+                                className="w-full md:w-48 py-2.5 rounded-xl bg-red-600 text-white text-sm font-semibold hover:bg-red-700 disabled:opacity-40 transition shadow-sm"
+                            >
+                                {running ? '⏳ Clearing...' : '🗑️ Clear All Data'}
                             </button>
                         </div>
                     </div>

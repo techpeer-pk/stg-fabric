@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, memo } from 'react'
 import Layout from '../../components/layout/Layout'
 import { SkeletonPOS } from '../../components/common/skeleton/Skeleton'
 import { auth } from '../../firebase/config'
-import FirestoreService from '../../firebase/firestore-multi-branch'
+import FirestoreService, { getBarcodeByCode } from '../../firebase/firestore-multi-branch'
 import useAuthStore from '../../store/authStore-multi-branch'
 import { handleError, showSuccess } from '../../utils/errorHandler'
 import { serverTimestamp } from 'firebase/firestore'
@@ -325,19 +325,39 @@ function POS() {
     const total = Math.max(0, subtotal + tax - redemptionValue)
     const change = amountPaid && parseFloat(amountPaid) > total ? parseFloat(amountPaid) - total : 0
 
-    const handleBarcodeSearch = (e) => {
+    const handleBarcodeSearch = async (e) => {
         if (e.key === 'Enter') {
             const barcode = search.trim()
             if (!barcode) return
+
+            // 1. Direct product barcode or name match
             const found = products.find(p => p.barcode && p.barcode.trim() === barcode)
                 || products.find(p => p.name.toLowerCase() === barcode.toLowerCase())
+
             if (found) {
                 addToCart(found)
                 setSearch('')
                 setBarcodeFlash(true)
                 setTimeout(() => setBarcodeFlash(false), 500)
+            } else {
+                // 2. FAB barcode lookup in barcodes collection
+                try {
+                    const snap = await getBarcodeByCode(businessId, barcode)
+                    if (!snap.empty) {
+                        const barcodeData = snap.docs[0].data()
+                        const product = products.find(p => p.id === barcodeData.productId)
+                        if (product) {
+                            addToCart(product)
+                            setSearch('')
+                            setBarcodeFlash(true)
+                            setTimeout(() => setBarcodeFlash(false), 500)
+                        }
+                    }
+                } catch (err) {
+                    console.error('Barcode lookup:', err)
+                }
             }
-            // Re-focus after scan so next scan works immediately
+
             setTimeout(() => searchInputRef.current?.focus(), 50)
         }
     }

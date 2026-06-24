@@ -3,7 +3,7 @@ import JsBarcode from 'jsbarcode'
 import { Html5QrcodeScanner } from 'html5-qrcode'
 import Layout from '../../components/layout/Layout'
 import {
-    addBarcode, getBarcodes, getBarcodeByCode, updateBarcode,
+    addBarcode, getBarcodes, getBarcodeByCode, updateBarcode, deleteBarcode,
     getProducts
 } from '../../firebase/firestore-multi-branch'
 import { SkeletonBarcode } from '../../components/common/skeleton/Skeleton'
@@ -57,7 +57,7 @@ export default function Barcode() {
     const usbInputRef = useRef(null)
 
     const LABEL_SIZES = [
-        { value: '76x50',  label: '3" × 2"  (76×50mm) — Default', w: '3in',   h: '2in',   bh: 45, bw: 0.8 },
+        { value: '76x50',  label: '3" × 2"  (76×50mm) — Default', w: '3in',   h: '2in',   bh: 45, bw: 1.2 },
         { value: '50x25',  label: '2" × 1"  (50×25mm)',            w: '2in',   h: '1in',   bh: 28, bw: 0.7 },
         { value: '38x25',  label: '1.5" × 1" (38×25mm)',           w: '1.5in', h: '1in',   bh: 25, bw: 0.6 },
         { value: '100x50', label: '4" × 2"  (100×50mm)',           w: '4in',   h: '2in',   bh: 55, bw: 1   },
@@ -66,6 +66,15 @@ export default function Barcode() {
     useEffect(() => {
         if (businessId) fetchProducts()
     }, [businessId])
+
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search)
+        const productId = params.get('product')
+        if (productId) {
+            setSelectedProduct(productId)
+            setTab('generate')
+        }
+    }, [])
 
     useEffect(() => {
         if (tab === 'history' && businessId) fetchBarcodes()
@@ -83,7 +92,7 @@ export default function Barcode() {
         if (barcodeId && barcodeRef.current) {
             try {
                 JsBarcode(barcodeRef.current, barcodeId, {
-                    format: 'CODE39',
+                    format: 'CODE128',
                     width: 2,
                     height: 60,
                     displayValue: true,
@@ -176,7 +185,7 @@ export default function Barcode() {
         document.body.appendChild(tempSvg)
         try {
             JsBarcode(tempSvg, code, {
-                format: 'CODE39',
+                format: 'CODE128',
                 width: size.bw,
                 height: size.bh,
                 displayValue: true,
@@ -232,7 +241,7 @@ export default function Barcode() {
             </head>
             <body>
                 <div class="label">
-                    <div class="biz">STG FABRIC POS</div>
+                    <div class="biz">RELINK GLOBAL</div>
                     ${svgHtml}
                     <div class="product-name">${productName || ''}</div>
                     <div class="barcode-id">${code}</div>
@@ -370,6 +379,18 @@ export default function Barcode() {
         }
     }
 
+    const handleDeleteBarcode = async (id) => {
+        if (!window.confirm('Yeh barcode delete karo?')) return
+        try {
+            await deleteBarcode(businessId, id)
+            setBarcodes(prev => prev.filter(b => b.id !== id))
+            if (scanResult?.id === id) setScanResult(null)
+            showSuccess('Barcode deleted')
+        } catch (err) {
+            handleError(err, 'Delete Barcode')
+        }
+    }
+
     const getStageStyle = (val) => STAGES.find(s => s.value === val)?.color || 'bg-gray-100 text-gray-700'
     const getStageLabel = (val) => STAGES.find(s => s.value === val)?.label || val
 
@@ -498,7 +519,7 @@ export default function Barcode() {
                             <>
                                 <h3 className="text-sm font-bold text-gray-500 uppercase tracking-widest mb-4">Label Preview</h3>
                                 <div className="border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-xl p-6 text-center w-full">
-                                    <p className="text-sm font-bold text-blue-600 mb-2">Fabric POS</p>
+                                    <p className="text-sm font-bold text-blue-600 mb-2">Relink Global</p>
                                     <svg ref={barcodeRef} className="mx-auto" />
                                     <p className="text-xs text-gray-500 mt-2">
                                         {products.find(p => p.id === selectedProduct)?.name}
@@ -690,12 +711,20 @@ export default function Barcode() {
                                             </span>
                                         </td>
                                         <td className="px-4 py-3">
-                                            <button
-                                                onClick={() => printLabel(b.barcodeId, b.productName)}
-                                                className="px-3 py-1 bg-gray-800 text-white rounded-lg text-xs font-bold hover:bg-gray-700 transition"
-                                            >
-                                                🖨️ Print
-                                            </button>
+                                            <div className="flex gap-2">
+                                                <button
+                                                    onClick={() => printLabel(b.barcodeId, b.productName)}
+                                                    className="px-3 py-1 bg-gray-800 text-white rounded-lg text-xs font-bold hover:bg-gray-700 transition"
+                                                >
+                                                    🖨️ Print
+                                                </button>
+                                                <button
+                                                    onClick={() => handleDeleteBarcode(b.id)}
+                                                    className="px-3 py-1 bg-red-100 text-red-600 rounded-lg text-xs font-bold hover:bg-red-200 transition"
+                                                >
+                                                    Delete
+                                                </button>
+                                            </div>
                                         </td>
                                     </tr>
                                 ))}

@@ -752,6 +752,11 @@ export const updateBarcode = (businessId, docId, data) => {
     return updateDoc(ref, data)
 }
 
+export const deleteBarcode = (businessId, docId) => {
+    const ref = doc(db, `businesses/${businessId}/barcodes`, docId)
+    return deleteDoc(ref)
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const saveUserFcmToken = async (businessId, userId, token) => {
