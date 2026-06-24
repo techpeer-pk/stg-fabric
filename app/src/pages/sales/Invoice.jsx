@@ -334,7 +334,7 @@ function Invoice() {
                         {/* QR Code */}
                         <div className="text-center">
                             <QRCodeCanvas
-                                value={`${window.location.origin}/invoice/${businessId}/${branchId}/${sale.id}`}
+                                value={`${window.location.origin}/verify/${businessId}/${branchId}/${sale.id}`}
                                 size={80}
                                 level="M"
                                 className="mx-auto"

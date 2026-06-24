@@ -1,0 +1,149 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ─── Helpers ─────────────────────────────────────────────────────────────
+
+    function isAuth() {
+      return request.auth != null;
+    }
+
+    function memberProfile(businessId) {
+      return get(/databases/$(database)/documents/business_users/$(businessId)/$(request.auth.uid)/profile).data;
+    }
+
+    function isMember(businessId) {
+      return isAuth() &&
+        exists(/databases/$(database)/documents/business_users/$(businessId)/$(request.auth.uid)/profile);
+    }
+
+    // owner = Admin
+    function isAdmin(businessId) {
+      return isMember(businessId) && memberProfile(businessId).role == 'owner';
+    }
+
+    // owner + manager
+    function isManager(businessId) {
+      return isMember(businessId) && memberProfile(businessId).role in ['owner', 'manager'];
+    }
+
+    // owner + manager + cashier
+    function isCashier(businessId) {
+      return isMember(businessId) && memberProfile(businessId).role in ['owner', 'manager', 'cashier'];
+    }
+
+    // ─── Global User Mapping ──────────────────────────────────────────────────
+    // users/{uid} — login pe businessId fetch karne ke liye
+    match /users/{userId} {
+      allow read, write: if isAuth() && request.auth.uid == userId;
+    }
+
+    // ─── Business Membership ──────────────────────────────────────────────────
+    match /business_users/{businessId}/{userId}/profile {
+      allow read: if isAuth() && (request.auth.uid == userId || isMember(businessId));
+      allow create: if isAuth() && (request.auth.uid == userId || isAdmin(businessId));
+      allow update, delete: if isAdmin(businessId);
+    }
+
+    // ─── Business Settings ────────────────────────────────────────────────────
+    match /businesses/{businessId} {
+      allow read: if true; // public — needed for QR invoice verify
+      allow create: if isAuth() && request.resource.data.owner_uid == request.auth.uid;
+      allow update: if isAdmin(businessId);
+      allow delete: if false;
+    }
+
+    // ─── Branches ────────────────────────────────────────────────────────────
+    // Admin creates/edits branches; everyone can read
+    match /businesses/{businessId}/branches/{branchId} {
+      allow read: if true; // public — needed for QR invoice verify (currency/settings)
+      allow write: if isAdmin(businessId);
+    }
+
+    // ─── Products ────────────────────────────────────────────────────────────
+    // Cashier: read only (for POS display)
+    // Manager+: full access
+    match /businesses/{businessId}/products/{doc} {
+      allow read: if isMember(businessId);
+      allow write: if isManager(businessId);
+    }
+
+    // ─── Categories ──────────────────────────────────────────────────────────
+    match /businesses/{businessId}/categories/{doc} {
+      allow read: if isMember(businessId);
+      allow write: if isManager(businessId);
+    }
+
+    // ─── Suppliers ───────────────────────────────────────────────────────────
+    // Cashier: no access
+    match /businesses/{businessId}/suppliers/{doc} {
+      allow read, write: if isManager(businessId);
+    }
+
+    // ─── Customers ───────────────────────────────────────────────────────────
+    // Cashier: can add/edit customers at POS; cannot delete
+    match /businesses/{businessId}/customers/{doc} {
+      allow read: if isMember(businessId);
+      allow create, update: if isCashier(businessId);
+      allow delete: if isManager(businessId);
+    }
+
+    // ─── Barcodes ────────────────────────────────────────────────────────────
+    // Cashier: read only (for POS scanning)
+    // Manager+: generate, delete
+    match /businesses/{businessId}/barcodes/{doc} {
+      allow read: if isMember(businessId);
+      allow write: if isManager(businessId);
+    }
+
+    // ─── Inventory ───────────────────────────────────────────────────────────
+    // Cashier: read + write (POS sale decrements stock)
+    match /businesses/{businessId}/branches/{branchId}/inventory/{doc} {
+      allow read: if isMember(businessId);
+      allow write: if isCashier(businessId);
+    }
+
+    // ─── Sales ───────────────────────────────────────────────────────────────
+    // Cashier: create new sales + read (Sales history page)
+    // Manager+: edit / delete / refund
+    // Public: read individual sale for QR invoice verify (anyone with the exact saleId)
+    match /businesses/{businessId}/branches/{branchId}/sales/{doc} {
+      allow read: if true; // public — QR invoice verify (anyone with exact saleId)
+      allow create: if isCashier(businessId);
+      allow update, delete: if isManager(businessId);
+    }
+
+    // ─── Sales Returns ───────────────────────────────────────────────────────
+    // Manager+ only (cashier cannot process returns)
+    match /businesses/{businessId}/branches/{branchId}/sales_returns/{doc} {
+      allow read, write: if isManager(businessId);
+    }
+
+    // ─── Suspended Sales (Hold) ───────────────────────────────────────────────
+    // Cashier can put on hold and resume
+    match /businesses/{businessId}/branches/{branchId}/suspended_sales/{doc} {
+      allow read, write: if isCashier(businessId);
+    }
+
+    // ─── Purchase Orders ─────────────────────────────────────────────────────
+    // Manager+ only
+    match /businesses/{businessId}/branches/{branchId}/purchase_orders/{doc} {
+      allow read, write: if isManager(businessId);
+    }
+
+    // ─── Expenses ────────────────────────────────────────────────────────────
+    match /businesses/{businessId}/branches/{branchId}/expenses/{doc} {
+      allow read, write: if isManager(businessId);
+    }
+
+    // ─── Cash Flow ───────────────────────────────────────────────────────────
+    match /businesses/{businessId}/branches/{branchId}/cash_flow/{doc} {
+      allow read, write: if isManager(businessId);
+    }
+
+    // ─── Register Reconciliation ──────────────────────────────────────────────
+    match /businesses/{businessId}/branches/{branchId}/reconciliations/{doc} {
+      allow read, write: if isManager(businessId);
+    }
+  }
+}

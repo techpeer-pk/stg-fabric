@@ -39,6 +39,7 @@ const RegisterReconciliation = lazy(() => import('./pages/accounts/RegisterRecon
 const Pricing             = lazy(() => import('./pages/public/Pricing'))
 const Purpose             = lazy(() => import('./pages/public/Purpose'))
 const PublicDocumentation = lazy(() => import('./pages/public/PublicDocumentation'))
+const PublicInvoice       = lazy(() => import('./pages/public/PublicInvoice'))
 
 // ── Page loader (shown while lazy chunk loads) ────────────────────────────────
 const PageLoader = () => (
@@ -134,6 +135,7 @@ function App() {
                     <Route path="/register" element={<Navigate to="/login" />} />
                     <Route path="/pending-approval" element={<PendingApproval />} />
                     <Route path="/invoice/:businessId/:branchId/:id" element={<Invoice />} />
+                    <Route path="/verify/:businessId/:branchId/:saleId" element={<PublicInvoice />} />
 
                     {/* Protected */}
                     <Route path="/dashboard"    element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
