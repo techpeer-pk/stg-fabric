@@ -164,20 +164,9 @@ function Products() {
 
     // Delete Product
     const handleDelete = async (id) => {
-        if (window.confirm('Delete this product? This will also remove its inventory data.')) {
+        if (window.confirm('Delete this product? This will also remove its inventory data from all branches.')) {
             try {
-                // Delete product and inventory (hierarchically)
-                await FirestoreService.deleteProduct(businessId, id)
-
-                // Note: In hierarchical structure, inventory is per branch. 
-                // We should ideally delete inventory for ALL branches, but here we delete for the current context.
-                // Or better, if FirestoreService.deleteProduct is implemented to clean up, use it.
-                // For now, let's assume we need to clean up the current branch inventory.
-                const invSnap = await FirestoreService.getInventoryByProduct(businessId, branchId, id)
-                invSnap.forEach(async (invDoc) => {
-                    await FirestoreService.deleteInventory(businessId, branchId, invDoc.id)
-                })
-
+                await FirestoreService.deleteProductCascade(businessId, id)
                 fetchProducts()
                 showSuccess('Product deleted')
             } catch (err) {

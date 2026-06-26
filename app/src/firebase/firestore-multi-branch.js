@@ -63,6 +63,24 @@ export const deleteProduct = (businessId, productId) => {
     return deleteDoc(doc(db, `businesses/${businessId}/products/${productId}`))
 }
 
+// Cascade delete: remove product + its inventory record across ALL branches
+export const deleteProductCascade = async (businessId, productId) => {
+    const branchesSnap = await getDocs(collection(db, `businesses/${businessId}/branches`))
+    const inventoryDeletes = []
+    for (const branchDoc of branchesSnap.docs) {
+        const invQuery = query(
+            collection(db, `businesses/${businessId}/branches/${branchDoc.id}/inventory`),
+            where('productId', '==', productId)
+        )
+        const invSnap = await getDocs(invQuery)
+        invSnap.docs.forEach(d => inventoryDeletes.push(deleteDoc(d.ref)))
+    }
+    await Promise.all([
+        deleteDoc(doc(db, `businesses/${businessId}/products/${productId}`)),
+        ...inventoryDeletes
+    ])
+}
+
 // ============================================
 // INVENTORY (Branch-Specific)
 // ============================================
@@ -773,7 +791,7 @@ export const saveUserFcmToken = async (businessId, userId, token) => {
 
 export default {
     // Products
-    addProduct, getProducts, getProductById, updateProduct, deleteProduct,
+    addProduct, getProducts, getProductById, updateProduct, deleteProduct, deleteProductCascade,
     // Inventory
     addInventory, getInventory, getInventoryByProduct, updateInventory, decrementInventory,
     // Categories
