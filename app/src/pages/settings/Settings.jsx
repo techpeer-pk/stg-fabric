@@ -7,6 +7,7 @@ import { Building2, DollarSign, Star, Receipt, Bell, CheckCircle2, Save } from '
 
 function Settings() {
     const { businessId, branchId } = useAuthStore()
+    const setCurrency = (c) => useAuthStore.setState({ currency: c })
     const [loading, setLoading] = useState(false)
     const [saved, setSaved] = useState(false)
     const [settings, setSettings] = useState({
@@ -98,6 +99,7 @@ function Settings() {
                 }
             })
 
+            setCurrency(settings.currency)
             setSaved(true)
             showSuccess('Settings updated for this branch')
             setTimeout(() => setSaved(false), 3000)

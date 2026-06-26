@@ -53,20 +53,15 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks: {
-          // Core React
           'vendor-react': ['react', 'react-dom', 'react-router-dom'],
-          // Firebase — split from app code (large, but cached long-term)
           'vendor-firebase': [
-            'firebase/app',
-            'firebase/auth',
-            'firebase/firestore',
-            'firebase/storage',
-            'firebase/messaging'
+            'firebase/app', 'firebase/auth', 'firebase/firestore',
+            'firebase/storage', 'firebase/messaging'
           ],
-          // UI libraries
-          'vendor-ui': ['lucide-react', 'react-hot-toast'],
-          // Charts (recharts is ~400KB alone)
+          'vendor-ui': ['lucide-react', 'react-hot-toast', 'zustand'],
           'vendor-charts': ['recharts'],
+          'vendor-barcode': ['jsbarcode', 'qrcode.react'],
+          'vendor-pdf': ['html2canvas', 'jspdf'],
         }
       }
     }

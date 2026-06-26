@@ -4,8 +4,7 @@ import { handleError } from '../../utils/errorHandler'
 import { QRCodeCanvas } from 'qrcode.react'
 import useAuthStore from '../../store/authStore-multi-branch'
 import FirestoreService from '../../firebase/firestore-multi-branch'
-import html2canvas from 'html2canvas'
-import { jsPDF } from 'jspdf'
+// html2canvas + jsPDF loaded dynamically on demand (heavy libs ~600KB)
 import { ArrowLeft, Printer, FileDown, Share2, Phone, Mail, Factory } from 'lucide-react'
 
 // Generate invoice number from sale ID
@@ -67,6 +66,10 @@ function Invoice() {
     // ── PDF Download ────────────────────────────────────────────────────────
     const downloadPDF = async () => {
         const element = invoiceRef.current
+        const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
+            import('html2canvas'),
+            import('jspdf')
+        ])
         const canvas = await html2canvas(element, { scale: 2, useCORS: true, backgroundColor: '#ffffff' })
         const imgData = canvas.toDataURL('image/png')
         const pdf = new jsPDF('p', 'mm', 'a4')
@@ -80,6 +83,7 @@ function Invoice() {
     // ── WhatsApp Share ──────────────────────────────────────────────────────
     const shareWhatsApp = async () => {
         const element = invoiceRef.current
+        const { default: html2canvas } = await import('html2canvas')
         const canvas = await html2canvas(element, { scale: 2, useCORS: true, backgroundColor: '#ffffff' })
         canvas.toBlob(async (blob) => {
             const file = new File([blob], `${getInvoiceNo(sale?.id)}.png`, { type: 'image/png' })

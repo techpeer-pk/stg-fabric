@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//e/Saifullah/fabric-pos/karan_reco/**)",
+      "Bash(python -c \"import openpyxl; wb = openpyxl.load_workbook\\('STG SALES.xlsx'\\); print\\('Sheets:', wb.sheetnames\\)\")",
+      "Bash(python -c \"import openpyxl; wb = openpyxl.load_workbook\\('STG STOCK & SALES.xlsx'\\); print\\('Sheets:', wb.sheetnames\\)\")",
+      "Bash(python -c ' *)",
+      "Bash(Get-ChildItem -Path \"E:\\\\Saifullah\\\\fabric-pos\\\\app\\\\src\" -Recurse -File)",
+      "Bash(Select-Object FullName)",
+      "Bash(Format-Table -AutoSize)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)",
+      "Bash(git pull *)",
+      "Read(//e/Saifullah/fabric-pos/**)",
+      "Bash(ls \"E:\\\\Saifullah\\\\fabric-pos\\\\\" && ls \"E:\\\\Saifullah\\\\fabric-pos\\\\app\\\\\")",
+      "Read(//e/Saifullah/**)",
+      "Bash(firebase --version)",
+      "Bash(firebase deploy *)",
+      "Bash(npm run *)",
+      "Bash(npm uninstall *)"
+    ]
+  }
+}

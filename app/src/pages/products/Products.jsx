@@ -33,7 +33,8 @@ function Products() {
     const [showForm, setShowForm] = useState(false)
     const [loading, setLoading] = useState(false)
     const [settings, setSettings] = useState(null)
-    const currency = settings?.currency || 'PKR'
+    const { currency: storeCurrency } = useAuthStore()
+    const currency = settings?.currency || storeCurrency || 'PKR'
     const [form, setForm] = useState({
         name: '',
         price: '',
@@ -89,8 +90,7 @@ function Products() {
             }))
             setProducts(mergedList)
 
-            // Default settings (simulated for now as specific business settings aren't in a global doc anymore)
-            setSettings({ currency: 'PKR' })
+            setSettings({})
         } catch (err) {
             handleError(err, 'Fetch Products', 'Failed to load products')
         }

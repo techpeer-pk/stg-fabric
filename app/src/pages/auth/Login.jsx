@@ -112,10 +112,18 @@ function Login() {
         }
     }
 
-    const completeLogin = (user, context, selectedBranch, role) => {
-        // PRIORITY: Use the role verified by MigrationService (which has the owner safety net)
-        // This allows recovery if the global users document was corrupted
+    const completeLogin = async (user, context, selectedBranch, role) => {
         const finalRole = context.role || role
+
+        // Fetch branch settings to get currency
+        let currency = 'PKR'
+        try {
+            const branchSnap = await FirestoreService.getBranch(context.businessId, selectedBranch.branchId)
+            if (branchSnap.exists()) {
+                currency = branchSnap.data()?.settings?.currency || 'PKR'
+            }
+        } catch {}
+
         useAuthStore.setState({
             user,
             businessId: context.businessId,
@@ -125,7 +133,8 @@ function Login() {
             isAuthenticated: true,
             userId: user.uid,
             userEmail: user.email,
-            userRole: finalRole
+            userRole: finalRole,
+            currency
         })
         showSuccess(`Welcome back to ${selectedBranch.branchName}!`)
         navigate('/dashboard')
