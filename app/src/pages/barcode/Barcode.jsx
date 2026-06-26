@@ -49,6 +49,10 @@ export default function Barcode() {
 
     const [barcodes, setBarcodes] = useState([])
     const [historyLoading, setHistoryLoading] = useState(false)
+    const [sortCol, setSortCol] = useState('createdAt')
+    const [sortDir, setSortDir] = useState('desc')
+    const [bcPage, setBcPage] = useState(1)
+    const [bcPerPage, setBcPerPage] = useState(25)
     const [labelSize, setLabelSize] = useState('76x50')
     const [labelRotate, setLabelRotate] = useState('0')
 
@@ -684,23 +688,49 @@ export default function Barcode() {
                             <p>Koi barcode nahi mila. Pehle generate karo.</p>
                         </div>
                     ) : (
+                        <>
                         <table className="w-full text-sm">
                             <thead className="bg-gray-50 dark:bg-gray-800 text-xs uppercase text-gray-500 dark:text-gray-400 font-black tracking-widest">
                                 <tr>
-                                    <th className="px-4 py-3 text-left">Barcode</th>
-                                    <th className="px-4 py-3 text-left">Product</th>
-                                    <th className="px-4 py-3 text-left">Roll / Qty</th>
-                                    <th className="px-4 py-3 text-left">Color</th>
-                                    <th className="px-4 py-3 text-left">Stage</th>
+                                    <th className="px-4 py-3 text-left w-10">#</th>
+                                    {[
+                                        { key: 'barcodeId', label: 'Barcode' },
+                                        { key: 'productName', label: 'Product' },
+                                        { key: 'rollNo', label: 'Roll / Qty' },
+                                        { key: 'color', label: 'Color' },
+                                        { key: 'currentStage', label: 'Stage' },
+                                    ].map(col => (
+                                        <th
+                                            key={col.key}
+                                            className="px-4 py-3 text-left cursor-pointer select-none hover:text-blue-600 transition"
+                                            onClick={() => {
+                                                if (sortCol === col.key) setSortDir(d => d === 'asc' ? 'desc' : 'asc')
+                                                else { setSortCol(col.key); setSortDir('asc') }
+                                                setBcPage(1)
+                                            }}
+                                        >
+                                            {col.label}
+                                            {sortCol === col.key && (
+                                                <span className="ml-1">{sortDir === 'asc' ? '↑' : '↓'}</span>
+                                            )}
+                                        </th>
+                                    ))}
                                     <th className="px-4 py-3 text-left">Print</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-                                {barcodes.map(b => (
-                                    <tr
-                                        key={b.id}
-                                        className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition"
-                                    >
+                                {(() => {
+                                    const sorted = [...barcodes].sort((a, b) => {
+                                        const aVal = (a[sortCol] || '').toString().toLowerCase()
+                                        const bVal = (b[sortCol] || '').toString().toLowerCase()
+                                        return sortDir === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal)
+                                    })
+                                    const totalPages = Math.ceil(sorted.length / bcPerPage)
+                                    const paginated = sorted.slice((bcPage - 1) * bcPerPage, bcPage * bcPerPage)
+                                    return paginated
+                                })().map((b, idx) => (
+                                    <tr key={b.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition">
+                                        <td className="px-4 py-3 text-gray-400 font-bold text-xs">{(bcPage - 1) * bcPerPage + idx + 1}</td>
                                         <td className="px-4 py-3 font-mono text-blue-600 font-bold cursor-pointer" onClick={() => { setScanResult(b); setTab('scan') }}>{b.barcodeId}</td>
                                         <td className="px-4 py-3 dark:text-gray-200 cursor-pointer" onClick={() => { setScanResult(b); setTab('scan') }}>{b.productName}</td>
                                         <td className="px-4 py-3 dark:text-gray-300 cursor-pointer" onClick={() => { setScanResult(b); setTab('scan') }}>{b.rollNo} · {b.quantity} {b.unit}</td>
@@ -730,6 +760,50 @@ export default function Barcode() {
                                 ))}
                             </tbody>
                         </table>
+                        {/* Pagination Footer */}
+                        {(() => {
+                            const totalPages = Math.ceil(barcodes.length / bcPerPage)
+                            if (totalPages <= 1 && barcodes.length <= 25) return null
+                            return (
+                                <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50">
+                                    <div className="flex items-center gap-2 text-xs text-gray-500">
+                                        <span>Rows:</span>
+                                        {[10, 25, 50].map(n => (
+                                            <button key={n} onClick={() => { setBcPerPage(n); setBcPage(1) }}
+                                                className={`px-2 py-1 rounded font-bold transition ${bcPerPage === n ? 'bg-blue-600 text-white' : 'hover:bg-gray-200 dark:hover:bg-gray-700'}`}>
+                                                {n}
+                                            </button>
+                                        ))}
+                                        <span className="ml-2">Showing {Math.min((bcPage - 1) * bcPerPage + 1, barcodes.length)}–{Math.min(bcPage * bcPerPage, barcodes.length)} of {barcodes.length}</span>
+                                    </div>
+                                    <div className="flex items-center gap-1">
+                                        <button onClick={() => setBcPage(1)} disabled={bcPage === 1}
+                                            className="px-2 py-1 rounded text-xs font-bold disabled:opacity-30 hover:bg-gray-200 dark:hover:bg-gray-700 transition">«</button>
+                                        <button onClick={() => setBcPage(p => p - 1)} disabled={bcPage === 1}
+                                            className="px-2 py-1 rounded text-xs font-bold disabled:opacity-30 hover:bg-gray-200 dark:hover:bg-gray-700 transition">‹</button>
+                                        {Array.from({ length: totalPages }, (_, i) => i + 1)
+                                            .filter(p => p === 1 || p === totalPages || Math.abs(p - bcPage) <= 1)
+                                            .reduce((acc, p, i, arr) => {
+                                                if (i > 0 && arr[i - 1] !== p - 1) acc.push('...')
+                                                acc.push(p)
+                                                return acc
+                                            }, [])
+                                            .map((p, i) => p === '...'
+                                                ? <span key={`e${i}`} className="px-2 text-gray-400 text-xs">…</span>
+                                                : <button key={p} onClick={() => setBcPage(p)}
+                                                    className={`px-2 py-1 rounded text-xs font-bold transition ${bcPage === p ? 'bg-blue-600 text-white' : 'hover:bg-gray-200 dark:hover:bg-gray-700'}`}>
+                                                    {p}
+                                                </button>
+                                            )}
+                                        <button onClick={() => setBcPage(p => p + 1)} disabled={bcPage === totalPages}
+                                            className="px-2 py-1 rounded text-xs font-bold disabled:opacity-30 hover:bg-gray-200 dark:hover:bg-gray-700 transition">›</button>
+                                        <button onClick={() => setBcPage(totalPages)} disabled={bcPage === totalPages}
+                                            className="px-2 py-1 rounded text-xs font-bold disabled:opacity-30 hover:bg-gray-200 dark:hover:bg-gray-700 transition">»</button>
+                                    </div>
+                                </div>
+                            )
+                        })()}
+                        </>
                     )}
                 </div>
             )}
