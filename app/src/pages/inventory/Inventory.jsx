@@ -48,6 +48,8 @@ function Inventory() {
             setProducts(productList)
             setCategories(categoryList)
 
+            const validProductIds = new Set(productList.map(p => p.id))
+
             // Auto-create missing inventory records for products
             const inventoryProductIds = new Set(inventoryList.map(i => i.productId))
             const missing = productList.filter(p => !inventoryProductIds.has(p.id))
@@ -60,12 +62,13 @@ function Inventory() {
                         lastRestocked: serverTimestamp()
                     })
                 ))
-                // Refetch after creating missing records
                 const freshSnap = await FirestoreService.getInventory(businessId, branchId)
                 const freshList = freshSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }))
-                setInventory(freshList)
+                // Filter out orphaned records (deleted products)
+                setInventory(freshList.filter(i => validProductIds.has(i.productId)))
             } else {
-                setInventory(inventoryList)
+                // Filter out orphaned records (deleted products)
+                setInventory(inventoryList.filter(i => validProductIds.has(i.productId)))
             }
         } catch (err) {
             console.error('Inventory fetch error:', err)
@@ -426,7 +429,7 @@ function Inventory() {
                                             <div className="text-center flex-shrink-0 w-14">
                                                 <span className="text-[9px] text-gray-400 block uppercase tracking-widest">Current</span>
                                                 <span className={`text-sm font-black ${status.color.includes('red') ? 'text-red-500' : status.color.includes('yellow') ? 'text-yellow-600' : 'text-gray-800 dark:text-gray-100'}`}>
-                                                    {item.quantity}
+                                                    {isNaN(item.quantity) ? 0 : item.quantity}
                                                 </span>
                                             </div>
 
@@ -602,7 +605,7 @@ function Inventory() {
                                                 <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">{getProductCategory(item.productId) || `ID: ${item.productId.slice(-8)}`}</p>
                                             </td>
                                             <td className="px-4 py-4">
-                                                <span className="text-xl font-black text-gray-900 dark:text-gray-100">{item.quantity}</span>
+                                                <span className="text-xl font-black text-gray-900 dark:text-gray-100">{isNaN(item.quantity) ? 0 : item.quantity}</span>
                                                 <span className="text-[10px] text-gray-400 dark:text-gray-500 font-bold uppercase ml-1">UNITS</span>
                                             </td>
                                             <td className="px-4 py-4">
