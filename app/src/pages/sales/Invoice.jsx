@@ -248,7 +248,7 @@ function Invoice() {
                             <h1 className="text-white text-xl font-black tracking-tight">
                                 {settings?.businessName || 'Fabric Factory'}
                             </h1>
-                            <p className="text-gray-400 text-xs mt-0.5 flex items-center gap-1"><Factory size={11} /> Fabric Factory — Karachi, Pakistan</p>
+                            {settings?.address && <p className="text-gray-400 text-xs mt-0.5 flex items-center gap-1"><Factory size={11} /> {settings.address}</p>}
                         </div>
                     </div>
                     <div className="text-right">
