@@ -20,7 +20,7 @@ const menuItems = [
     { path: '/pos',                   icon: ShoppingCart,      label: 'POS',               roles: ['owner', 'manager', 'cashier'] },
     { path: '/products',              icon: Package,           label: 'Products',          roles: ['owner', 'manager'] },
     { path: '/inventory',             icon: Warehouse,         label: 'Inventory',         roles: ['owner', 'manager'] },
-    { path: '/barcode',               icon: ScanBarcode,       label: 'Barcode',           roles: ['owner', 'manager', 'cashier'] },
+    { path: '/barcode',               icon: ScanBarcode,       label: 'Barcode',           roles: ['owner', 'manager'] },
     { path: '/suppliers',             icon: Truck,             label: 'Suppliers',         roles: ['owner', 'manager'] },
     { path: '/purchase-orders',       icon: ClipboardList,     label: 'PO',                roles: ['owner', 'manager'] },
     { path: '/sales',                 icon: ReceiptText,       label: 'Sales',             roles: ['owner', 'manager', 'cashier'] },

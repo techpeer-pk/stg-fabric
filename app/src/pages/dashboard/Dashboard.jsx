@@ -17,7 +17,7 @@ import {
 const COLORS = ['#2563eb', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6']
 
 function Dashboard() {
-    const { businessId, branchId, branchName } = useAuthStore()
+    const { businessId, branchId, branchName, currency: storeCurrency } = useAuthStore()
     const [stats, setStats] = useState({
         todaySales: 0, yesterdaySales: 0,
         todayTransactions: 0, yesterdayTransactions: 0,
@@ -29,7 +29,7 @@ function Dashboard() {
     const [chartRange, setChartRange] = useState('weekly')
     const [customFrom, setCustomFrom] = useState('')
     const [customTo, setCustomTo] = useState('')
-    const currency = 'PKR'
+    const currency = storeCurrency || 'PKR'
 
     const buildChartData = (sales, range, from = '', to = '') => {
         const now = new Date()

@@ -25,8 +25,8 @@ function Sales() {
     const [sortDir, setSortDir] = useState('desc')
     const [page, setPage] = useState(1)
     const [rowsPerPage, setRowsPerPage] = useState(25)
-    const currency = settings?.currency || 'PKR'
-    const { user, businessId, branchId } = useAuthStore()
+    const { user, businessId, branchId, currency: storeCurrency } = useAuthStore()
+    const currency = settings?.currency || storeCurrency || 'PKR'
 
     const fetchSales = async () => {
         setLoading(true)
@@ -193,13 +193,13 @@ function Sales() {
                 <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-gray-800">
                     <p className="text-gray-500 dark:text-gray-400 text-xs font-black uppercase tracking-widest mb-1">Total Revenue</p>
                     <h3 className="text-3xl font-black text-green-600 dark:text-green-400">
-                        {sales[0]?.currency || 'PKR'} {totalRevenue.toFixed(2)}
+                        {currency} {totalRevenue.toFixed(2)}
                     </h3>
                 </div>
                 <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-gray-800">
                     <p className="text-gray-500 dark:text-gray-400 text-xs font-black uppercase tracking-widest mb-1">Average Sale</p>
                     <h3 className="text-3xl font-black text-blue-600 dark:text-blue-400">
-                        {sales[0]?.currency || 'PKR'} {sales.length ? (totalRevenue / sales.length).toFixed(2) : '0.00'}
+                        {currency} {sales.length ? (totalRevenue / sales.length).toFixed(2) : '0.00'}
                     </h3>
                 </div>
             </div>

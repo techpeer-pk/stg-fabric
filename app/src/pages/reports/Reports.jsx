@@ -9,7 +9,7 @@ import {
 } from 'lucide-react'
 
 function Reports() {
-    const { businessId, branchId } = useAuthStore()
+    const { businessId, branchId, currency: storeCurrency } = useAuthStore()
     const [sales, setSales] = useState([])
     const [products, setProducts] = useState([])
     const [purchaseOrders, setPurchaseOrders] = useState([])
@@ -19,7 +19,7 @@ function Reports() {
     const [customFrom, setCustomFrom] = useState('')
     const [customTo, setCustomTo] = useState('')
 
-    const currency = 'PKR'
+    const currency = storeCurrency || 'PKR'
     const getAmt = s => s.finalAmount || s.total || 0
 
     useEffect(() => {
