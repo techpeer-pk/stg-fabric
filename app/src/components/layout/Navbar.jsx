@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import useAuthStore from '../../store/authStore-multi-branch'
 import useThemeStore from '../../store/themeStore'
 
 function Navbar({ title, onMenuClick }) {
     const { user, userRole } = useAuthStore()
     const { isDarkMode, toggleTheme } = useThemeStore()
+    const navigate = useNavigate()
     const [isOnline, setIsOnline] = useState(navigator.onLine)
 
     useEffect(() => {
@@ -58,13 +60,18 @@ function Navbar({ title, onMenuClick }) {
                         Online
                     </div>
                 )}
-                <div className="text-right hidden sm:block">
-                    <p className="text-sm font-bold text-gray-800 dark:text-gray-100 leading-none">{user?.displayName || 'User'}</p>
-                    <p className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mt-1">{userRole || 'Staff'}</p>
-                </div>
-                <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center text-white font-black shadow-lg shadow-blue-200 dark:shadow-none ring-2 ring-white dark:ring-gray-800">
-                    {user?.displayName ? user.displayName.charAt(0).toUpperCase() : 'U'}
-                </div>
+                <button
+                    onClick={() => navigate('/user-settings')}
+                    className="flex items-center gap-3 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl px-2 py-1.5 transition-colors group"
+                >
+                    <div className="text-right hidden sm:block">
+                        <p className="text-sm font-bold text-gray-800 dark:text-gray-100 leading-none group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{user?.displayName || 'User'}</p>
+                        <p className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mt-1">{userRole || 'Staff'}</p>
+                    </div>
+                    <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center text-white font-black shadow-lg shadow-blue-200 dark:shadow-none ring-2 ring-white dark:ring-gray-800 group-hover:ring-blue-300 transition-all">
+                        {user?.displayName ? user.displayName.charAt(0).toUpperCase() : 'U'}
+                    </div>
+                </button>
             </div>
 
         </div>
