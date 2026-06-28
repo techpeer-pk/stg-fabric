@@ -292,11 +292,21 @@ function POS() {
     }
 
     const addToCart = (product) => {
+        if ((product.stock ?? 0) <= 0) {
+            alert(`"${product.name}" is out of stock.`)
+            return
+        }
         setSuccess(false)
         setLastSaleId(null)
         setCart(prev => {
             const existing = prev.find(item => item.id === product.id)
-            if (existing) return prev.map(item => item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item)
+            if (existing) {
+                if (existing.quantity >= (product.stock ?? 0)) {
+                    alert(`Only ${product.stock} in stock for "${product.name}".`)
+                    return prev
+                }
+                return prev.map(item => item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item)
+            }
             return [...prev, { ...product, quantity: 1 }]
         })
     }
@@ -305,6 +315,11 @@ function POS() {
 
     const updateQty = (id, qty) => {
         if (qty < 1) return removeFromCart(id)
+        const product = products.find(p => p.id === id)
+        if (product && qty > (product.stock ?? 0)) {
+            alert(`Only ${product.stock} in stock for "${product.name}".`)
+            return
+        }
         setCart(prev => prev.map(item => item.id === id ? { ...item, quantity: qty } : item))
     }
 
