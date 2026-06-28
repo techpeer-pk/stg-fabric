@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fabric POS — Testing Checklist</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 13px; color: #1a1a2e; background: #f8f9fa; padding: 24px; }
+  .container { max-width: 1100px; margin: 0 auto; background: #fff; border-radius: 12px; padding: 40px; box-shadow: 0 2px 16px rgba(0,0,0,0.08); }
+
+  /* Header */
+  .header { border-bottom: 3px solid #2563eb; padding-bottom: 20px; margin-bottom: 28px; }
+  h1 { font-size: 22px; color: #1e40af; font-weight: 700; margin-bottom: 8px; }
+  .meta { color: #64748b; font-size: 12px; line-height: 1.8; }
+  .legend { display: flex; gap: 20px; margin-top: 10px; font-size: 12px; font-weight: 600; }
+  .legend span { padding: 3px 10px; border-radius: 20px; }
+  .legend .pass { background: #dcfce7; color: #16a34a; }
+  .legend .fail { background: #fee2e2; color: #dc2626; }
+  .legend .skip { background: #f1f5f9; color: #64748b; }
+
+  /* Section */
+  .section { margin-bottom: 32px; }
+  h2 { font-size: 14px; font-weight: 700; color: #fff; background: #2563eb; padding: 8px 14px; border-radius: 8px 8px 0 0; margin-bottom: 0; letter-spacing: 0.5px; }
+
+  /* Table */
+  table { width: 100%; border-collapse: collapse; border: 1px solid #e2e8f0; border-top: none; }
+  thead tr { background: #eff6ff; }
+  th { padding: 9px 12px; text-align: left; font-size: 11px; font-weight: 700; color: #1e40af; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #bfdbfe; }
+  td { padding: 9px 12px; border-bottom: 1px solid #f1f5f9; vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: #fafbff; }
+
+  /* Column widths */
+  th:nth-child(1), td:nth-child(1) { width: 52px; color: #94a3b8; font-weight: 700; }
+  th:nth-child(3), td:nth-child(3) { color: #475569; font-size: 12px; }
+  th:nth-child(4), td:nth-child(4) { width: 90px; }
+  th:nth-child(5), td:nth-child(5) { width: 160px; }
+
+  /* Result cell */
+  .result-cell { display: flex; gap: 6px; }
+  .result-cell label { cursor: pointer; display: flex; align-items: center; gap: 3px; font-size: 11px; font-weight: 600; padding: 3px 7px; border-radius: 4px; border: 1px solid #e2e8f0; }
+  .result-cell input[type=radio] { accent-color: #2563eb; }
+
+  /* Notes input */
+  .notes-input { width: 100%; border: 1px solid #e2e8f0; border-radius: 4px; padding: 4px 6px; font-size: 11px; font-family: inherit; resize: none; color: #374151; }
+  .notes-input:focus { outline: none; border-color: #93c5fd; }
+
+  /* Bugs table */
+  .bugs-input { width: 100%; border: 1px solid #e2e8f0; border-radius: 4px; padding: 4px 6px; font-size: 12px; font-family: inherit; }
+  .bugs-input:focus { outline: none; border-color: #93c5fd; }
+  select.severity { border: 1px solid #e2e8f0; border-radius: 4px; padding: 4px 6px; font-size: 11px; font-family: inherit; background: #fff; }
+
+  /* Sign-off */
+  .signoff { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 20px 24px; margin-top: 28px; }
+  .signoff h2 { background: #16a34a; border-radius: 8px 8px 0 0; margin: -20px -24px 16px; padding: 8px 14px; }
+  .signoff-item { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; font-size: 13px; font-weight: 500; }
+  .signoff-item input[type=checkbox] { width: 16px; height: 16px; accent-color: #16a34a; cursor: pointer; }
+  .signoff-footer { display: flex; gap: 40px; margin-top: 20px; padding-top: 16px; border-top: 1px solid #bbf7d0; }
+  .signoff-field { flex: 1; }
+  .signoff-field label { display: block; font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+  .signoff-field input { width: 100%; border: none; border-bottom: 2px solid #16a34a; padding: 4px 2px; font-size: 13px; font-family: inherit; background: transparent; outline: none; }
+
+  /* Print */
+  @media print {
+    body { background: #fff; padding: 0; font-size: 11px; }
+    .container { box-shadow: none; padding: 20px; border-radius: 0; }
+    .notes-input, .bugs-input { border: 1px solid #ccc; }
+    h2 { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    thead tr { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .section { page-break-inside: avoid; }
+    .print-btn { display: none; }
+  }
+
+  /* Print button */
+  .print-btn { position: fixed; bottom: 24px; right: 24px; background: #2563eb; color: #fff; border: none; border-radius: 50px; padding: 12px 24px; font-size: 13px; font-weight: 700; cursor: pointer; box-shadow: 0 4px 12px rgba(37,99,235,0.4); letter-spacing: 0.5px; }
+  .print-btn:hover { background: #1d4ed8; }
+
+  /* Striped alt rows */
+  tbody tr:nth-child(even) td { background: #fafbff; }
+  tbody tr:nth-child(even):hover td { background: #eff6ff; }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="header">
+    <h1>Fabric POS — Pre-Production Testing Checklist</h1>
+    <div class="meta">
+      <strong>Project:</strong> STG Fabric &nbsp;|&nbsp;
+      <strong>URL:</strong> https://stg-fabric.web.app &nbsp;|&nbsp;
+      <strong>Date:</strong> 2026-06-28 &nbsp;|&nbsp;
+      <strong>Tester:</strong> ___________________________
+    </div>
+    <div class="legend">
+      <span class="pass">✅ Pass</span>
+      <span class="fail">❌ Fail</span>
+      <span class="skip">⏭ Skip</span>
+    </div>
+  </div>
+
+  <!-- Helper macro via JS -->
+  <script>
+    function makeRow(num, test, expected) {
+      return `<tr>
+        <td>${num}</td>
+        <td>${test}</td>
+        <td>${expected}</td>
+        <td>
+          <div class="result-cell">
+            <label><input type="radio" name="r${num.replace('.','_')}" value="pass"> ✅</label>
+            <label><input type="radio" name="r${num.replace('.','_')}" value="fail"> ❌</label>
+            <label><input type="radio" name="r${num.replace('.','_')}" value="skip"> ⏭</label>
+          </div>
+        </td>
+        <td><textarea class="notes-input" rows="1" placeholder="notes..."></textarea></td>
+      </tr>`;
+    }
+    function section(title, rows) {
+      return `<div class="section">
+        <h2>${title}</h2>
+        <table>
+          <thead><tr><th>#</th><th>Test</th><th>Expected</th><th>Result</th><th>Notes</th></tr></thead>
+          <tbody>${rows.map(r => makeRow(r[0], r[1], r[2])).join('')}</tbody>
+        </table>
+      </div>`;
+    }
+    document.addEventListener('DOMContentLoaded', () => {
+      const container = document.getElementById('sections');
+      const sections = [
+        ['1. AUTH &amp; LOGIN', [
+          ['1.1','Owner login','Dashboard loads, role = "owner" shown in navbar'],
+          ['1.2','Manager login','Dashboard loads, role = "manager"'],
+          ['1.3','Cashier login','Dashboard loads, role = "cashier"'],
+          ['1.4','Wrong password','Error message shown, no crash'],
+          ['1.5','Logout','Redirects to login, localStorage cleared'],
+          ['1.6','Page refresh','Stays logged in (auth persists)'],
+          ['1.7','Direct URL access (logged out)','Redirects to /login'],
+        ]],
+        ['2. SIDEBAR / NAVIGATION', [
+          ['2.1','Owner sidebar','All sections visible (Main, Inventory, Sales, Reports, Accounts, Management)'],
+          ['2.2','Manager sidebar','Same as owner minus employee management'],
+          ['2.3','Cashier sidebar','Only: Dashboard, POS, Sales, Customers, Help'],
+          ['2.4','Cashier — no Barcode link','Barcode page NOT in cashier menu'],
+          ['2.5','Cashier — no Accounts link','Accounts NOT in cashier menu'],
+          ['2.6','Active link highlight','Current page highlighted in sidebar'],
+          ['2.7','Mobile menu toggle','Hamburger opens/closes sidebar'],
+        ]],
+        ['3. DASHBOARD', [
+          ['3.1','KPI cards load','Revenue, Sales count, Customers shown'],
+          ['3.2','Currency correct','Shows PKR (or whatever is set in Settings)'],
+          ['3.3','Branch name shown','Correct branch name in header'],
+          ['3.4','Charts render','No blank/broken charts'],
+        ]],
+        ['4. POS (Point of Sale)', [
+          ['4.1','Products list loads','All products shown with stock'],
+          ['4.2','Search product','Filters correctly'],
+          ['4.3','Add to cart','Product added, quantity = 1'],
+          ['4.4','Out of stock product','Toast error: "is out of stock", NOT added to cart'],
+          ['4.5','Increase qty beyond stock','Toast error: "Only X in stock", qty capped'],
+          ['4.6','Remove item from cart','Item removed, total recalculated'],
+          ['4.7','Checkout — empty cart','Toast: "Cart is empty!"'],
+          ['4.8','Checkout — cash, no amount entered','Toast: "Please enter amount paid!"'],
+          ['4.9','Checkout — amount less than total','Toast: "Amount paid is less than total!"'],
+          ['4.10','Checkout — 0 price item','Toast: "Some items have invalid price"'],
+          ['4.11','Successful sale','Invoice shown, stock reduced, sale saved'],
+          ['4.12','Currency in cart','Shows correct currency (PKR/USD/etc)'],
+          ['4.13','Hold sale','Cart saved as suspended'],
+          ['4.14','Resume held sale','Cart restored correctly'],
+          ['4.15','Barcode scan','Product found and added'],
+          ['4.16','Walk-in customer','Sale completes without customer selected'],
+          ['4.17','Select customer','Customer attached to sale, points applied'],
+        ]],
+        ['5. INVOICE', [
+          ['5.1','Invoice shows business name','Correct business name from Settings'],
+          ['5.2','NO hardcoded "Karachi, Pakistan"','Address only shows if set in Settings'],
+          ['5.3','Download PDF','PDF downloads correctly'],
+          ['5.4','WhatsApp share','Opens WhatsApp with invoice image'],
+          ['5.5','Invoice totals match','Subtotal, tax, discount, total all correct'],
+          ['5.6','Currency on invoice','Correct currency symbol'],
+        ]],
+        ['6. PRODUCTS', [
+          ['6.1','Products list loads','Table with search, sort, pagination'],
+          ['6.2','Add product','Product saved, appears in list'],
+          ['6.3','Price field — negative not allowed','Cannot enter negative price (min=0)'],
+          ['6.4','Cost price — negative not allowed','Cannot enter negative cost price'],
+          ['6.5','Edit product','Changes saved correctly'],
+          ['6.6','Delete product','Product + all inventory records deleted (cascade)'],
+          ['6.7','Cashier view','No Add/Edit/Delete buttons visible'],
+          ['6.8','Sort by name/price/stock','Sorts correctly'],
+          ['6.9','Search','Filters by name/barcode'],
+          ['6.10','Pagination','10/25/50/100 rows, page navigation works'],
+        ]],
+        ['7. INVENTORY', [
+          ['7.1','Inventory loads','All products with stock shown'],
+          ['7.2','No "Unknown Product" rows','Orphaned records filtered out'],
+          ['7.3','Stock adjust','Quantity updates correctly'],
+          ['7.4','Low stock items','Highlighted or flagged'],
+          ['7.5','Stock = 0 items','Shown as "Out of Stock"'],
+        ]],
+        ['8. SALES HISTORY', [
+          ['8.1','Sales list loads','All sales shown'],
+          ['8.2','Currency in totals','Correct currency (not hardcoded PKR)'],
+          ['8.3','Owner — Delete button visible','Red delete button shown per row'],
+          ['8.4','Manager — Delete button visible','Delete button shown'],
+          ['8.5','Cashier — Delete button hidden','No delete button for cashier'],
+          ['8.6','Delete sale','Sale removed, confirmation shown'],
+          ['8.7','View invoice','Invoice modal opens correctly'],
+          ['8.8','Date filter','Filters sales by date range'],
+          ['8.9','Search sales','Filters by customer/amount'],
+        ]],
+        ['9. CUSTOMERS', [
+          ['9.1','Customer list loads','All customers shown'],
+          ['9.2','Currency in "Gross Expenditure"','Correct currency (not hardcoded PKR)'],
+          ['9.3','Owner/Manager — Review + Purge buttons','Edit/delete visible'],
+          ['9.4','Cashier — "Immutable" label','No edit/delete, shows "Immutable"'],
+          ['9.5','Add customer','Customer saved'],
+          ['9.6','Edit customer','Changes saved'],
+          ['9.7','Delete customer','Customer removed'],
+          ['9.8','Loyalty points','Points calculated correctly from sales'],
+        ]],
+        ['10. BARCODE PAGE', [
+          ['10.1','Table loads','All barcodes shown with S.No'],
+          ['10.2','Search','Filters by product name/barcode'],
+          ['10.3','Sort columns','Sorts by name/barcode/price'],
+          ['10.4','Rows per page','10/25/50/100 dropdown works'],
+          ['10.5','Pagination footer','Page 1 of N, prev/next buttons'],
+          ['10.6','Print barcode','Zebra printer, Portrait, CODE128, darkness 0'],
+          ['10.7','Cashier — no Barcode access','/barcode redirects or shows 403'],
+        ]],
+        ['11. REPORTS', [
+          ['11.1','Reports load','Charts and tables render'],
+          ['11.2','Currency correct','Correct currency throughout'],
+          ['11.3','Date range filter','Filters data correctly'],
+          ['11.4','Top products','Shows correct best-sellers'],
+          ['11.5','Export/Download','PDF or CSV works'],
+        ]],
+        ['12. ACCOUNTS', [
+          ['12.1','Summary loads','Revenue, Expenses, Net Profit shown'],
+          ['12.2','Period filter (Today/Month/Year)','Numbers change correctly'],
+          ['12.3','Net Profit = Revenue - COGS - Expenses','Math is correct'],
+          ['12.4','Add expense','Saved, Summary updates'],
+          ['12.5','Edit expense','Changes saved'],
+          ['12.6','Delete expense','Removed'],
+          ['12.7','Cash Flow — add entry','Saved with correct +/- sign'],
+          ['12.8','Register Reconciliation','End-of-day count works'],
+        ]],
+        ['13. SETTINGS', [
+          ['13.1','Settings load','Current values shown'],
+          ['13.2','Change currency (e.g. USD)','Saved, all pages now show USD'],
+          ['13.3','Currency persists on refresh','Still USD after F5'],
+          ['13.4','Change business name','Reflected in invoice'],
+          ['13.5','Add address','Shows on invoice, replaces blank'],
+          ['13.6','Tax settings','Tax rate applied in POS'],
+        ]],
+        ['14. EMPLOYEES', [
+          ['14.1','Employee list loads','All staff shown'],
+          ['14.2','Add employee','Account created, role set'],
+          ['14.3','Remove employee','Removed from both collections'],
+          ['14.4','Cashier — no access','Management not in cashier sidebar'],
+        ]],
+        ['15. NAVBAR &amp; USER PROFILE', [
+          ['15.1','Name + avatar clickable','Navigates to /user-settings'],
+          ['15.2','Hover effect on name','Blue color on hover'],
+          ['15.3','Online/Offline badge','Shows correct connectivity status'],
+          ['15.4','Dark mode toggle','Switches theme, persists on refresh'],
+        ]],
+        ['16. PERFORMANCE &amp; EDGE CASES', [
+          ['16.1','First load time','App loads under 3 seconds'],
+          ['16.2','Offline mode','"Offline Mode" badge shown, app doesn\'t crash'],
+          ['16.3','Back button navigation','No unexpected reloads or blank pages'],
+          ['16.4','Mobile (375px)','All pages usable on mobile'],
+          ['16.5','Fast repeated clicks','No duplicate sales/expenses created'],
+          ['16.6','Empty states','"No data" shown (not blank/broken)'],
+        ]],
+      ];
+      container.innerHTML = sections.map(([title, rows]) => section(title, rows)).join('');
+    });
+  </script>
+
+  <div id="sections"></div>
+
+  <!-- Bugs Section -->
+  <div class="section">
+    <h2 style="background:#dc2626;">BUGS FOUND DURING TESTING</h2>
+    <table>
+      <thead>
+        <tr><th>#</th><th>Page</th><th>Bug Description</th><th>Severity</th><th>Fixed?</th></tr>
+      </thead>
+      <tbody id="bugs-body">
+        <tr>
+          <td>1</td>
+          <td><input class="bugs-input" placeholder="Page name"></td>
+          <td><input class="bugs-input" placeholder="Describe the bug"></td>
+          <td>
+            <select class="severity">
+              <option value="">—</option>
+              <option value="critical">🔴 Critical</option>
+              <option value="high">🟠 High</option>
+              <option value="medium">🟡 Medium</option>
+              <option value="low">🟢 Low</option>
+            </select>
+          </td>
+          <td>
+            <div class="result-cell">
+              <label><input type="radio" name="fix1" value="yes"> ✅ Yes</label>
+              <label><input type="radio" name="fix1" value="no"> ❌ No</label>
+            </div>
+          </td>
+        </tr>
+        <tr>
+          <td>2</td>
+          <td><input class="bugs-input" placeholder="Page name"></td>
+          <td><input class="bugs-input" placeholder="Describe the bug"></td>
+          <td>
+            <select class="severity">
+              <option value="">—</option>
+              <option value="critical">🔴 Critical</option>
+              <option value="high">🟠 High</option>
+              <option value="medium">🟡 Medium</option>
+              <option value="low">🟢 Low</option>
+            </select>
+          </td>
+          <td>
+            <div class="result-cell">
+              <label><input type="radio" name="fix2" value="yes"> ✅ Yes</label>
+              <label><input type="radio" name="fix2" value="no"> ❌ No</label>
+            </div>
+          </td>
+        </tr>
+        <tr>
+          <td>3</td>
+          <td><input class="bugs-input" placeholder="Page name"></td>
+          <td><input class="bugs-input" placeholder="Describe the bug"></td>
+          <td>
+            <select class="severity">
+              <option value="">—</option>
+              <option value="critical">🔴 Critical</option>
+              <option value="high">🟠 High</option>
+              <option value="medium">🟡 Medium</option>
+              <option value="low">🟢 Low</option>
+            </select>
+          </td>
+          <td>
+            <div class="result-cell">
+              <label><input type="radio" name="fix3" value="yes"> ✅ Yes</label>
+              <label><input type="radio" name="fix3" value="no"> ❌ No</label>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Sign-off -->
+  <div class="signoff">
+    <h2>SIGN-OFF</h2>
+    <div class="signoff-item"><input type="checkbox"> All critical tests (auth, POS, sales, inventory) passed</div>
+    <div class="signoff-item"><input type="checkbox"> Currency correct on all pages</div>
+    <div class="signoff-item"><input type="checkbox"> No hardcoded addresses in invoice</div>
+    <div class="signoff-item"><input type="checkbox"> Role-based access verified for all 3 roles</div>
+    <div class="signoff-item"><input type="checkbox"> Ready for client demo / production</div>
+    <div class="signoff-footer">
+      <div class="signoff-field">
+        <label>Tested by</label>
+        <input type="text" placeholder="Full name">
+      </div>
+      <div class="signoff-field">
+        <label>Date</label>
+        <input type="date" value="2026-06-28">
+      </div>
+      <div class="signoff-field">
+        <label>Overall Result</label>
+        <input type="text" placeholder="e.g. PASS with 2 minor bugs">
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<button class="print-btn" onclick="window.print()">🖨 Print / Save PDF</button>
+
+</body>
+</html>
