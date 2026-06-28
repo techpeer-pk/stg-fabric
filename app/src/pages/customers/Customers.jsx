@@ -7,7 +7,8 @@ import { serverTimestamp } from 'firebase/firestore'
 import useAuthStore from '../../store/authStore-multi-branch'
 
 function Customers() {
-    const { user, businessId } = useAuthStore()
+    const { user, businessId, userRole, currency: storeCurrency } = useAuthStore()
+    const currency = storeCurrency || 'PKR'
     const [customers, setCustomers] = useState([])
     const [showForm, setShowForm] = useState(false)
     const [loading, setLoading] = useState(false)
@@ -297,12 +298,12 @@ function Customers() {
                                         </td>
                                         <td className="px-6 py-5">
                                             <div className="flex flex-col">
-                                                <span className="text-green-600 dark:text-green-400 font-black text-sm">PKR {(customer.totalSpent || 0).toLocaleString()}</span>
+                                                <span className="text-green-600 dark:text-green-400 font-black text-sm">{currency} {(customer.totalSpent || 0).toLocaleString()}</span>
                                                 <span className="text-[9px] text-gray-400 dark:text-gray-500 font-bold uppercase tracking-tighter">Gross Expenditure</span>
                                             </div>
                                         </td>
                                         <td className="px-6 py-5">
-                                            {(user?.role === 'admin' || user?.role === 'manager') && (
+                                            {(userRole === 'owner' || userRole === 'manager') && (
                                                 <div className="flex gap-4">
                                                     <button
                                                         onClick={() => setEditingCustomer(customer)}
@@ -318,7 +319,7 @@ function Customers() {
                                                     </button>
                                                 </div>
                                             )}
-                                            {user?.role === 'cashier' && (
+                                            {userRole === 'cashier' && (
                                                 <span className="text-gray-400 dark:text-gray-600 text-[10px] font-black uppercase tracking-widest italic">Immutable</span>
                                             )}
                                         </td>

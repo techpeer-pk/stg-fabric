@@ -306,6 +306,7 @@ function Products() {
                             <input
                                 type="number"
                                 required
+                                min="0"
                                 value={form.price}
                                 onChange={(e) => setForm({ ...form, price: e.target.value })}
                                 className="w-full border dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all font-bold"
@@ -316,6 +317,7 @@ function Products() {
                             <label className="text-xs font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1 block">Cost Price</label>
                             <input
                                 type="number"
+                                min="0"
                                 value={form.costPrice}
                                 onChange={(e) => setForm({ ...form, costPrice: e.target.value })}
                                 className="w-full border dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
@@ -454,6 +456,7 @@ function Products() {
                                 <input
                                     type="number"
                                     required
+                                    min="0"
                                     value={editingProduct.price}
                                     onChange={(e) => setEditingProduct({ ...editingProduct, price: e.target.value })}
                                     className="w-full border dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all font-bold text-blue-600"
@@ -463,6 +466,7 @@ function Products() {
                                 <label className="text-xs font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1 block">Cost Price</label>
                                 <input
                                     type="number"
+                                    min="0"
                                     value={editingProduct.costPrice}
                                     onChange={(e) => setEditingProduct({ ...editingProduct, costPrice: e.target.value })}
                                     className="w-full border dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"

@@ -5,6 +5,7 @@ import { auth } from '../../firebase/config'
 import FirestoreService, { getBarcodeByCode } from '../../firebase/firestore-multi-branch'
 import useAuthStore from '../../store/authStore-multi-branch'
 import { handleError, showSuccess } from '../../utils/errorHandler'
+import toast from 'react-hot-toast'
 import { serverTimestamp } from 'firebase/firestore'
 import { generateReceiptMessage, getWhatsAppLink, getSMSLink } from '../../utils/receiptHelper'
 import SearchableDropdown from '../../components/common/SearchableDropdown'
@@ -293,7 +294,7 @@ function POS() {
 
     const addToCart = (product) => {
         if ((product.stock ?? 0) <= 0) {
-            alert(`"${product.name}" is out of stock.`)
+            toast.error(`"${product.name}" is out of stock.`)
             return
         }
         setSuccess(false)
@@ -302,7 +303,7 @@ function POS() {
             const existing = prev.find(item => item.id === product.id)
             if (existing) {
                 if (existing.quantity >= (product.stock ?? 0)) {
-                    alert(`Only ${product.stock} in stock for "${product.name}".`)
+                    toast.error(`Only ${product.stock} in stock for "${product.name}".`)
                     return prev
                 }
                 return prev.map(item => item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item)
@@ -317,7 +318,7 @@ function POS() {
         if (qty < 1) return removeFromCart(id)
         const product = products.find(p => p.id === id)
         if (product && qty > (product.stock ?? 0)) {
-            alert(`Only ${product.stock} in stock for "${product.name}".`)
+            toast.error(`Only ${product.stock} in stock for "${product.name}".`)
             return
         }
         setCart(prev => prev.map(item => item.id === id ? { ...item, quantity: qty } : item))
@@ -390,10 +391,11 @@ function POS() {
     }
 
     const handleCheckout = async () => {
-        if (cart.length === 0) return alert('Cart is empty!')
+        if (cart.length === 0) return toast.error('Cart is empty!')
+        if (cart.some(item => !item.price || item.price <= 0)) return toast.error('Some items have invalid price (0 or missing).')
         const paid = amountPaid
-        if (paymentMethod === 'cash' && (!paid || parseFloat(paid) <= 0)) return alert('Please enter amount paid!')
-        if (paymentMethod === 'cash' && parseFloat(paid) < total) return alert(`Amount paid is less than total! Minimum: ${currency} ${total.toFixed(2)}`)
+        if (paymentMethod === 'cash' && (!paid || parseFloat(paid) <= 0)) return toast.error('Please enter amount paid!')
+        if (paymentMethod === 'cash' && parseFloat(paid) < total) return toast.error(`Amount paid is less than total! Minimum: ${currency} ${total.toFixed(2)}`)
         setLoading(true)
         try {
             const saleData = {
@@ -488,7 +490,7 @@ function POS() {
     }
 
     const handleHoldSale = async () => {
-        if (cart.length === 0) return alert('Cart is empty!')
+        if (cart.length === 0) return toast.error('Cart is empty!')
         setLoading(true)
         try {
             await FirestoreService.addSuspendedSale(businessId, branchId, {
@@ -513,9 +515,8 @@ function POS() {
             // Refresh suspended sales list
             const snapshot = await FirestoreService.getSuspendedSales(businessId, branchId)
             setSuspendedSales(snapshot.docs.map(d => ({ id: d.id, ...d.data() })))
-            alert('Sale suspended successfully!')
+            showSuccess('Sale suspended successfully!')
         } catch (err) {
-            console.error(err)
             handleError(err, 'Hold Sale', 'Failed to suspend sale')
         } finally {
             setLoading(false)
