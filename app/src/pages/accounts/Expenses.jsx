@@ -38,20 +38,29 @@ function Expenses() {
     const [editingExpense, setEditingExpense] = useState(null)
     const [searchQuery, setSearchQuery] = useState('')
     const [selectedCategory, setSelectedCategory] = useState('All')
+    const [settings, setSettings] = useState(null)
+
+    // Business doc nests config under `settings` (see initializeBusiness)
+    const currency = settings?.settings?.currency || settings?.currency || 'PKR'
 
     const [form, setForm] = useState({
         title: '',
         amount: '',
         category: 'Other',
         date: new Date().toISOString().split('T')[0],
-        notes: ''
+        notes: '',
+        paymentMethod: 'cash' // 'cash' reduces the physical register; 'bank' hits P&L only
     })
 
     const fetchExpenses = async () => {
         if (!businessId || !branchId) return
         try {
-            const snapshot = await FirestoreService.getExpenses(businessId, branchId)
+            const [snapshot, businessSnap] = await Promise.all([
+                FirestoreService.getExpenses(businessId, branchId),
+                FirestoreService.getBusiness(businessId)
+            ])
             setExpenses(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })))
+            if (businessSnap.exists()) setSettings(businessSnap.data())
         } catch (err) {
             handleError(err, 'Fetch Expenses', 'Failed to load expense records')
         }
@@ -59,8 +68,10 @@ function Expenses() {
 
     useEffect(() => {
         if (businessId && branchId) {
-            fetchExpenses()
-            setInitialLoading(false)
+            (async () => {
+                await fetchExpenses()
+                setInitialLoading(false)
+            })()
         }
     }, [businessId, branchId])
 
@@ -68,17 +79,37 @@ function Expenses() {
         e.preventDefault()
         setLoading(true)
         try {
-            await FirestoreService.addExpense(businessId, branchId, {
+            const amountNum = parseFloat(form.amount)
+            const expenseRef = await FirestoreService.addExpense(businessId, branchId, {
                 ...form,
-                amount: parseFloat(form.amount),
+                amount: amountNum,
                 createdAt: serverTimestamp()
             })
+            // IFRS: a cash-settled expense leaves the physical drawer, so mirror it into the cash
+            // ledger as an outflow (bank/card expenses hit P&L only, never the drawer).
+            if (form.paymentMethod === 'cash') {
+                try {
+                    const cf = await FirestoreService.addCashFlow(businessId, branchId, {
+                        type: 'out',
+                        category: 'Expense',
+                        amount: -Math.abs(amountNum),
+                        reason: form.title || 'Expense',
+                        date: form.date,
+                        createdAt: serverTimestamp(),
+                        expenseId: expenseRef.id
+                    })
+                    await FirestoreService.updateExpense(businessId, branchId, expenseRef.id, { linkedCashFlowId: cf.id })
+                } catch (syncErr) {
+                    console.error('Expense -> Cash Flow sync failed:', syncErr)
+                }
+            }
             setForm({
                 title: '',
                 amount: '',
                 category: 'Other',
                 date: new Date().toISOString().split('T')[0],
-                notes: ''
+                notes: '',
+                paymentMethod: 'cash'
             })
             setShowForm(false)
             showSuccess('Expense recorded successfully')
@@ -94,11 +125,46 @@ function Expenses() {
         e.preventDefault()
         setLoading(true)
         try {
+            const amountNum = parseFloat(editingExpense.amount)
+            const method = editingExpense.paymentMethod || 'cash'
+            const linkedId = editingExpense.linkedCashFlowId || null
+
             await FirestoreService.updateExpense(businessId, branchId, editingExpense.id, {
                 ...editingExpense,
-                amount: parseFloat(editingExpense.amount),
+                amount: amountNum,
+                paymentMethod: method,
                 updatedAt: serverTimestamp()
             })
+
+            // Keep the cash-ledger mirror in sync with the edited expense.
+            try {
+                if (method === 'cash') {
+                    const cfData = {
+                        type: 'out',
+                        category: 'Expense',
+                        amount: -Math.abs(amountNum),
+                        reason: editingExpense.title || 'Expense',
+                        date: editingExpense.date
+                    }
+                    if (linkedId) {
+                        await FirestoreService.updateCashFlow(businessId, branchId, linkedId, cfData)
+                    } else {
+                        const cf = await FirestoreService.addCashFlow(businessId, branchId, {
+                            ...cfData,
+                            createdAt: serverTimestamp(),
+                            expenseId: editingExpense.id
+                        })
+                        await FirestoreService.updateExpense(businessId, branchId, editingExpense.id, { linkedCashFlowId: cf.id })
+                    }
+                } else if (linkedId) {
+                    // Switched cash -> bank/card: the drawer no longer funds this expense.
+                    await FirestoreService.deleteCashFlow(businessId, branchId, linkedId)
+                    await FirestoreService.updateExpense(businessId, branchId, editingExpense.id, { linkedCashFlowId: null })
+                }
+            } catch (syncErr) {
+                console.error('Expense -> Cash Flow sync failed:', syncErr)
+            }
+
             setEditingExpense(null)
             showSuccess('Expense updated successfully')
             fetchExpenses()
@@ -112,6 +178,15 @@ function Expenses() {
     const handleDelete = async (id) => {
         if (window.confirm('Delete this expense record?')) {
             try {
+                // Remove the mirrored cash-ledger entry first (if this was a cash expense).
+                const exp = expenses.find(e => e.id === id)
+                if (exp?.linkedCashFlowId) {
+                    try {
+                        await FirestoreService.deleteCashFlow(businessId, branchId, exp.linkedCashFlowId)
+                    } catch (syncErr) {
+                        console.error('Linked Cash Flow delete failed:', syncErr)
+                    }
+                }
                 await FirestoreService.deleteExpense(businessId, branchId, id)
                 showSuccess('Expense deleted')
                 fetchExpenses()
@@ -122,7 +197,7 @@ function Expenses() {
     }
 
     const filteredExpenses = expenses.filter(exp => {
-        const matchesSearch = exp.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        const matchesSearch = exp.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
             exp.notes?.toLowerCase().includes(searchQuery.toLowerCase())
         const matchesCategory = selectedCategory === 'All' || exp.category === selectedCategory
         return matchesSearch && matchesCategory
@@ -149,7 +224,7 @@ function Expenses() {
                         <div className="absolute top-0 right-0 w-32 h-32 bg-red-500/5 rounded-full -mr-16 -mt-16 transition-transform group-hover:scale-110"></div>
                         <p className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-1 relative z-10">Aggregate Expenditure</p>
                         <h3 className="text-3xl font-black text-gray-800 dark:text-gray-100 tracking-tight relative z-10">
-                            PKR {totalAmount.toLocaleString()}
+                            {currency} {totalAmount.toLocaleString()}
                         </h3>
                         <p className="text-[10px] text-gray-400 dark:text-gray-500 font-bold mt-2 relative z-10 uppercase tracking-widest">Active Filter Boundary</p>
                     </div>
@@ -221,7 +296,7 @@ function Expenses() {
                                                 </span>
                                             </td>
                                             <td className="px-6 py-5 text-sm font-black text-gray-900 dark:text-gray-100 text-right tracking-tight">
-                                                PKR {exp.amount?.toLocaleString()}
+                                                {currency} {exp.amount?.toLocaleString()}
                                             </td>
                                             <td className="px-6 py-5 text-right">
                                                 <div className="flex justify-end gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -277,6 +352,7 @@ function Expenses() {
                                         type="number"
                                         required
                                         step="0.01"
+                                        min="0"
                                         value={form.amount}
                                         onChange={(e) => setForm({ ...form, amount: e.target.value })}
                                         className="w-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 rounded-2xl px-5 py-3.5 focus:ring-2 focus:ring-blue-500 outline-none font-bold transition-all"
@@ -292,6 +368,17 @@ function Expenses() {
                                         {CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
                                     </select>
                                 </div>
+                            </div>
+                            <div>
+                                <label className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest block mb-2">Payment Method</label>
+                                <select
+                                    value={form.paymentMethod}
+                                    onChange={(e) => setForm({ ...form, paymentMethod: e.target.value })}
+                                    className="w-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 rounded-2xl px-5 py-3.5 focus:ring-2 focus:ring-blue-500 outline-none font-bold transition-all"
+                                >
+                                    <option value="cash">Cash (reduces register drawer)</option>
+                                    <option value="bank">Bank / Card (P&amp;L only)</option>
+                                </select>
                             </div>
                             <div>
                                 <label className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest block mb-2">Event Timestamp</label>
@@ -359,6 +446,7 @@ function Expenses() {
                                         type="number"
                                         required
                                         step="0.01"
+                                        min="0"
                                         value={editingExpense.amount}
                                         onChange={(e) => setEditingExpense({ ...editingExpense, amount: e.target.value })}
                                         className="w-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 rounded-2xl px-5 py-3.5 focus:ring-2 focus:ring-blue-500 outline-none font-bold transition-all"
@@ -374,6 +462,17 @@ function Expenses() {
                                         {CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
                                     </select>
                                 </div>
+                            </div>
+                            <div>
+                                <label className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest block mb-2">Payment Method</label>
+                                <select
+                                    value={editingExpense.paymentMethod || 'cash'}
+                                    onChange={(e) => setEditingExpense({ ...editingExpense, paymentMethod: e.target.value })}
+                                    className="w-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 rounded-2xl px-5 py-3.5 focus:ring-2 focus:ring-blue-500 outline-none font-bold transition-all"
+                                >
+                                    <option value="cash">Cash (reduces register drawer)</option>
+                                    <option value="bank">Bank / Card (P&amp;L only)</option>
+                                </select>
                             </div>
                             <div>
                                 <label className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest block mb-2">Event Timestamp</label>

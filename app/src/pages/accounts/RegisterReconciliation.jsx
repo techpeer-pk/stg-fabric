@@ -27,7 +27,8 @@ function RegisterReconciliation() {
     const [notes, setNotes] = useState('')
     const [lastReconciliation, setLastReconciliation] = useState(null)
 
-    const currency = settings?.currency || 'PKR'
+    // Business doc nests config under `settings` (see initializeBusiness)
+    const currency = settings?.settings?.currency || settings?.currency || 'PKR'
 
     useEffect(() => {
         const fetchData = async () => {
@@ -69,8 +70,10 @@ function RegisterReconciliation() {
         fetchData()
     }, [businessId, branchId])
 
-    const cashIn = cashFlow.filter(c => c.type === 'in').reduce((sum, c) => sum + (c.amount || 0), 0)
-    const cashOut = cashFlow.filter(c => c.type === 'out').reduce((sum, c) => sum + (c.amount || 0), 0)
+    // cash_flow 'out' amounts are stored negative; take magnitudes so both the expectedCash math
+    // (opening + in - out) and the "+inflow / -outflow" display render correctly.
+    const cashIn = cashFlow.filter(c => c.type === 'in').reduce((sum, c) => sum + Math.abs(c.amount || 0), 0)
+    const cashOut = cashFlow.filter(c => c.type === 'out').reduce((sum, c) => sum + Math.abs(c.amount || 0), 0)
     const openingBalance = lastReconciliation?.actualCash || 0
     const expectedCash = openingBalance + cashIn - cashOut
     const difference = parseFloat(actualCash || 0) - expectedCash
@@ -167,7 +170,7 @@ function RegisterReconciliation() {
                             <div className="bg-blue-600/5 dark:bg-blue-400/5 rounded-[2rem] p-8 border border-blue-600/10 dark:border-blue-400/10 relative overflow-hidden">
                                 <p className="text-[11px] text-blue-800 dark:text-blue-300 font-bold leading-relaxed relative z-10 flex gap-4">
                                     <span className="text-2xl mt-1">💡</span>
-                                    The theoretical target is synthesized from the terminal starting float plus all verified liquidity shifts (sales + manual movements) recorded during the active cycle.
+                                    The theoretical target is synthesized from the terminal starting float plus all verified cash movements (cash sales, cash-settled expenses, and manual adjustments) recorded during the active cycle.
                                 </p>
                             </div>
                         </div>

@@ -27,7 +27,8 @@ function CashFlow() {
     const [showForm, setShowForm] = useState(false)
     const [type, setType] = useState('in') // 'in' or 'out'
     const [settings, setSettings] = useState(null)
-    const currency = settings?.currency || 'PKR'
+    // Business doc nests config under `settings` (see initializeBusiness)
+    const currency = settings?.settings?.currency || settings?.currency || 'PKR'
 
     const [form, setForm] = useState({
         amount: '',
@@ -54,8 +55,10 @@ function CashFlow() {
 
     useEffect(() => {
         if (businessId && branchId) {
-            fetchMovements()
-            setInitialLoading(false)
+            (async () => {
+                await fetchMovements()
+                setInitialLoading(false)
+            })()
         }
     }, [businessId, branchId])
 
@@ -141,7 +144,7 @@ function CashFlow() {
                         <h3 className={`text-5xl font-black tracking-tight ${currentBalance >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                             {currency} {currentBalance.toLocaleString()}
                         </h3>
-                        <p className="text-[9px] text-gray-400 dark:text-gray-500 mt-3 font-black uppercase tracking-[0.2em]">Manual Liquidity Adjustments Only</p>
+                        <p className="text-[9px] text-gray-400 dark:text-gray-500 mt-3 font-black uppercase tracking-[0.2em]">Cash Sales · Cash Expenses · Manual Adjustments</p>
                     </div>
                     <div className="flex flex-wrap gap-4 w-full lg:w-auto relative z-10">
                         <button
@@ -179,7 +182,7 @@ function CashFlow() {
                                         <td className="px-8 py-20 text-center text-gray-400 dark:text-gray-500 italic uppercase tracking-widest text-[10px] font-black opacity-30">No liquidity fluctuations mapped.</td>
                                     </tr>
                                 ) : (
-                                    movements.map((m) => (
+                                    movements.slice(0, 50).map((m) => (
                                         <tr key={m.id} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/30 transition-colors group">
                                             <td className="px-8 py-6">
                                                 <div className="flex items-center gap-6">
@@ -236,7 +239,7 @@ function CashFlow() {
                             <div>
                                 <label className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest block mb-2">Liquidity Volume *</label>
                                 <div className="relative">
-                                    <span className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-400 font-bold">PKR</span>
+                                    <span className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-400 font-bold">{currency}</span>
                                     <input
                                         type="number"
                                         required

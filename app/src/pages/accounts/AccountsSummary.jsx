@@ -12,7 +12,8 @@ function AccountsSummary() {
     const [loading, setLoading] = useState(true)
     const [period, setPeriod] = useState('month') // 'today', 'month', 'year'
 
-    const currency = settings?.currency || 'PKR'
+    // Business doc nests config under `settings` (see initializeBusiness); fall back gracefully
+    const currency = settings?.settings?.currency || settings?.currency || 'PKR'
 
     useEffect(() => {
         const fetchData = async () => {
@@ -38,12 +39,20 @@ function AccountsSummary() {
         fetchData()
     }, [businessId, branchId])
 
+    // Normalize Firestore Timestamp / {seconds} / ISO string / ms number -> JS Date (or null)
+    const getDate = (val) => {
+        if (!val) return null
+        if (typeof val.toDate === 'function') return val.toDate() // Firestore Timestamp
+        if (val.seconds != null) return new Date(val.seconds * 1000) // raw {seconds,nanoseconds}
+        const d = new Date(val) // ISO string / ms number
+        return isNaN(d) ? null : d
+    }
+
     const filterByPeriod = (data, dateField = 'createdAt') => {
         const now = new Date()
         return data.filter(item => {
-            if (!item[dateField]) return false
-            // Handle both Firestore Timestamp and ISO strings
-            const date = item[dateField].toDate ? item[dateField].toDate() : new Date(item[dateField])
+            const date = getDate(item[dateField])
+            if (!date) return false
 
             if (period === 'today') return date.toDateString() === now.toDateString()
             if (period === 'month') return date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear()
@@ -57,7 +66,9 @@ function AccountsSummary() {
     const filteredCashFlow = filterByPeriod(cashFlow)
 
     // Advanced Financial Logic
-    const totalRevenue = filteredSales.reduce((sum, s) => sum + (s.total || 0), 0)
+    // Revenue lives in `finalAmount` (total after tax/discount) on the sale doc — see POS.jsx saleData.
+    // There is no `total` field on a sale, so the old `s.total` always summed to 0.
+    const totalRevenue = filteredSales.reduce((sum, s) => sum + (s.finalAmount ?? s.subtotal ?? s.total ?? 0), 0)
 
     // Calculate COGS: Sum of (item.costPrice * item.quantity) for all items in filtered sales
     const totalCOGS = filteredSales.reduce((sum, sale) => {
@@ -71,7 +82,9 @@ function AccountsSummary() {
     const totalExpenses = filteredExpenses.reduce((sum, e) => sum + (e.amount || 0), 0)
     const netProfit = grossProfit - totalExpenses
 
-    // Total cash balance is always cumulative
+    // Physical cash position (cumulative). Cash sales post to the ledger as inflows and cash-settled
+    // expenses post as outflows (see Expenses.jsx), so a straight sum of cash_flow IS the drawer balance.
+    // Bank/card expenses correctly never touch this — they only affect P&L (netProfit) above.
     const cashBalance = cashFlow.reduce((sum, c) => sum + (c.amount || 0), 0)
 
     if (loading) {
