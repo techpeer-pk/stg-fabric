@@ -2,8 +2,6 @@ import { useState, useRef } from 'react'
 import Layout from '../../components/layout/Layout'
 import { db } from '../../firebase/config'
 import useAuthStore from '../../store/authStore-multi-branch'
-import { populateTestData } from '../../firebase/seedData'
-import firestoreService from '../../firebase/firestore-multi-branch'
 import {
     collection,
     getDocs,
@@ -13,20 +11,20 @@ import {
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const ALL_COLLECTIONS = [
-    { id: 'products', label: 'Products', icon: '📦', defaultOn: true },
-    { id: 'categories', label: 'Categories', icon: '🏷️', defaultOn: true },
-    { id: 'inventory', label: 'Inventory', icon: '🏪', defaultOn: true },
-    { id: 'customers', label: 'Customers', icon: '👥', defaultOn: true },
-    { id: 'suppliers', label: 'Suppliers', icon: '🏭', defaultOn: false },
-    { id: 'users', label: 'Users/Staff', icon: '👨‍💼', defaultOn: false },
-    { id: 'sales', label: 'Sales', icon: '💰', defaultOn: false },
-    { id: 'sales_returns', label: 'Sales Returns', icon: '🔄', defaultOn: false },
-    { id: 'purchase_orders', label: 'Purchase Orders', icon: '📝', defaultOn: false },
-    { id: 'expenses', label: 'Expenses', icon: '💸', defaultOn: false },
-    { id: 'cash_flow', label: 'Cash Flow', icon: '🏧', defaultOn: false },
-    { id: 'reconciliations', label: 'Reconciliations', icon: '📋', defaultOn: false },
-    { id: 'suspended_sales', label: 'Suspended Sales', icon: '⏸️', defaultOn: false },
-    { id: 'settings', label: 'Settings', icon: '⚙️', defaultOn: false },
+    { id: 'products', label: 'Products', icon: 'box', defaultOn: true },
+    { id: 'categories', label: 'Categories', icon: 'tag', defaultOn: true },
+    { id: 'inventory', label: 'Inventory', icon: 'warehouse', defaultOn: true },
+    { id: 'customers', label: 'Customers', icon: 'users', defaultOn: true },
+    { id: 'suppliers', label: 'Suppliers', icon: 'factory', defaultOn: false },
+    { id: 'users', label: 'Users/Staff', icon: 'briefcase', defaultOn: false },
+    { id: 'sales', label: 'Sales', icon: 'dollar', defaultOn: false },
+    { id: 'sales_returns', label: 'Sales Returns', icon: 'undo', defaultOn: false },
+    { id: 'purchase_orders', label: 'Purchase Orders', icon: 'fileText', defaultOn: false },
+    { id: 'expenses', label: 'Expenses', icon: 'card', defaultOn: false },
+    { id: 'cash_flow', label: 'Cash Flow', icon: 'banknote', defaultOn: false },
+    { id: 'reconciliations', label: 'Reconciliations', icon: 'listCheck', defaultOn: false },
+    { id: 'suspended_sales', label: 'Suspended Sales', icon: 'pause', defaultOn: false },
+    { id: 'settings', label: 'Settings', icon: 'gear', defaultOn: false },
 ]
 
 const BATCH_SIZE = 499
@@ -48,6 +46,43 @@ function nowFilename() {
     return `gpos-backup-${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}.json`
 }
 
+// ── Inline SVG icons (replace emojis) ───────────────────────────────────────────
+const ICON_PATHS = {
+    box: <><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z" /><path d="m3.3 7 8.7 5 8.7-5" /><path d="M12 22V12" /></>,
+    tag: <><path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z" /><circle cx="7.5" cy="7.5" r=".5" fill="currentColor" /></>,
+    warehouse: <><path d="M3 21V8l9-5 9 5v13" /><path d="M3 21h18" /><path d="M8 21v-8h8v8" /></>,
+    users: <><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></>,
+    factory: <><path d="M2 20a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8l-7 5V8l-7 5V4a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z" /><path d="M7 18h.01M12 18h.01M17 18h.01" /></>,
+    briefcase: <><rect x="2" y="7" width="20" height="14" rx="2" /><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" /></>,
+    dollar: <><line x1="12" x2="12" y1="2" y2="22" /><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></>,
+    undo: <><path d="M3 7v6h6" /><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13" /></>,
+    fileText: <><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><path d="M14 2v6h6" /><path d="M16 13H8M16 17H8" /></>,
+    card: <><rect x="2" y="5" width="20" height="14" rx="2" /><line x1="2" x2="22" y1="10" y2="10" /></>,
+    banknote: <><rect x="2" y="6" width="20" height="12" rx="2" /><circle cx="12" cy="12" r="2" /><path d="M6 12h.01M18 12h.01" /></>,
+    listCheck: <><path d="M11 12H3M16 6H3M16 18H3" /><path d="m17 12 2 2 4-4" /></>,
+    pause: <><rect x="6" y="4" width="4" height="16" rx="1" /><rect x="14" y="4" width="4" height="16" rx="1" /></>,
+    gear: <><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" /></>,
+    download: <><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><path d="m7 10 5 5 5-5" /><path d="M12 15V3" /></>,
+    upload: <><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><path d="m17 8-5-5-5 5" /><path d="M12 3v12" /></>,
+    trash: <><path d="M3 6h18" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /><path d="M10 11v6M14 11v6" /></>,
+    folder: <path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z" />,
+    check: <path d="M20 6 9 17l-5-5" />,
+    bulb: <><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5" /><path d="M9 18h6M10 22h4" /></>,
+    clipboardList: <><rect x="8" y="2" width="8" height="4" rx="1" /><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" /><path d="M9 12h6M9 16h6" /></>,
+    lock: <><rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></>,
+    spinner: <path d="M21 12a9 9 0 1 1-6.219-8.56" />,
+}
+
+function Icon({ name, className = 'w-4 h-4' }) {
+    const path = ICON_PATHS[name]
+    if (!path) return null
+    return (
+        <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            {path}
+        </svg>
+    )
+}
+
 // ── Component ─────────────────────────────────────────────────────────────────
 export default function Backup() {
     const { businessId, branchId, userRole } = useAuthStore()
@@ -55,6 +90,11 @@ export default function Backup() {
     // Export state
     const [exportCols, setExportCols] = useState(
         Object.fromEntries(ALL_COLLECTIONS.map(c => [c.id, c.defaultOn]))
+    )
+
+    // Delete state — nothing pre-selected (destructive)
+    const [deleteCols, setDeleteCols] = useState(
+        Object.fromEntries(ALL_COLLECTIONS.map(c => [c.id, false]))
     )
 
     // Import state
@@ -170,7 +210,7 @@ export default function Backup() {
                     setProgress({ done, total })
                 }
 
-                addLog('ok', `  ✅ ${col.icon} ${col.label} — ${snap.size} docs`)
+                addLog('ok', `  ✅ ${col.label} — ${snap.size} docs`)
             }
 
             // Download
@@ -297,91 +337,66 @@ export default function Backup() {
         }
     }
 
-    // ── Seed Data ────────────────────────────────────────────────────────────
-    async function startSeeding() {
-        const confirmed = window.confirm(
-            "This will populate your business with sample products, categories, customers, and staff. Continue?"
-        )
-        if (!confirmed) return
+    // ── Delete (per-collection, mirrors Export) ────────────────────────────────
+    async function startDelete() {
+        const selected = ALL_COLLECTIONS.filter(c => deleteCols[c.id])
+        if (selected.length === 0) return alert('Select at least one collection to delete.')
 
-        setRunning(true)
-        resetLog()
-        addLog('info', "🌱 Initiating Seed Data process...")
-
-        try {
-            const result = await populateTestData(businessId, 'owner', firestoreService, (type, msg) => {
-                addLog(type, msg)
-            })
-
-            if (result.success) {
-                setStatus('done')
-                addLog('done', `Seeding complete: ${result.summary.products} fabric products, ${result.summary.categories} categories, ${result.summary.customers} customers, ${result.summary.suppliers} suppliers, ${result.summary.sales || 5} sales, ${result.summary.cashFlowEntries || 5} cash flow entries added.`)
-            } else {
-                setStatus('error')
-                addLog('error', `❌ Seeding Failed: ${result.error}`)
-            }
-        } catch (err) {
-            setStatus('error')
-            addLog('error', `❌ Critical Error: ${err.message}`)
-        } finally {
-            setRunning(false)
-        }
-    }
-
-    // ── Clear All Data ───────────────────────────────────────────────────────
-    async function startClearData() {
         const typed = window.prompt(
-            'WARNING: Yeh sab data delete karega (users nahi).\n\nConfirm karne ke liye "DELETE" type karo:'
+            `WARNING: This permanently deletes ${selected.length} collection(s):\n\n` +
+            selected.map(c => `• ${c.label}`).join('\n') +
+            `\n\nType "DELETE" to confirm:`
         )
         if (typed !== 'DELETE') {
-            if (typed !== null) alert('Cancel. "DELETE" match nahi hua.')
+            if (typed !== null) alert('Cancelled — "DELETE" did not match.')
             return
         }
 
         setRunning(true)
         resetLog()
-        addLog('warn', '🗑️ Clearing all data — users preserved...')
+        addLog('warn', `🗑️ Deleting ${selected.length} collection(s)...`)
+        addLog('info', `🏢 Scope: Business(${businessId}) | Branch(${branchId || 'Global'})`)
 
-        const BUSINESS_COLS = ['products', 'categories', 'customers', 'suppliers', 'barcodes']
-        const BRANCH_COLS   = ['inventory', 'sales', 'sales_returns', 'purchase_orders',
-                               'expenses', 'cash_flow', 'reconciliations', 'suspended_sales']
+        let total = 0
+        let done = 0
 
         try {
-            const branchesSnap = await getDocs(collection(db, 'businesses', businessId, 'branches'))
-            addLog('info', `${branchesSnap.size} branch(es) found`)
-
-            for (const branchDoc of branchesSnap.docs) {
-                const bId = branchDoc.id
-                addLog('info', `Branch: ${bId}`)
-                for (const colId of BRANCH_COLS) {
-                    const colRef = collection(db, 'businesses', businessId, 'branches', bId, colId)
-                    const snap = await getDocs(colRef)
-                    if (snap.empty) continue
-                    for (let i = 0; i < snap.docs.length; i += BATCH_SIZE) {
-                        const batch = writeBatch(db)
-                        snap.docs.slice(i, i + BATCH_SIZE).forEach(d => batch.delete(d.ref))
-                        await batch.commit()
-                    }
-                    addLog('ok', `  ✅ ${colId}: ${snap.size} deleted`)
-                }
-            }
-
-            for (const colId of BUSINESS_COLS) {
-                const colRef = collection(db, 'businesses', businessId, colId)
+            // First pass — count docs
+            for (const col of selected) {
+                const colRef = getCollectionRef(col.id)
+                if (!colRef) continue
                 const snap = await getDocs(colRef)
-                if (snap.empty) { addLog('info', `  ↷ ${colId}: empty`); continue }
+                total += snap.size
+            }
+            setProgress({ done: 0, total })
+            addLog('info', `📊 Found ${total} document(s) to delete`)
+
+            // Second pass — delete
+            for (const col of selected) {
+                const colRef = getCollectionRef(col.id)
+                if (!colRef) {
+                    addLog('warn', `  ⚠️ Skipping ${col.label} — path not available in this context`)
+                    continue
+                }
+                const snap = await getDocs(colRef)
+                if (snap.empty) { addLog('info', `  ↷ ${col.label}: empty`); continue }
+
                 for (let i = 0; i < snap.docs.length; i += BATCH_SIZE) {
                     const batch = writeBatch(db)
-                    snap.docs.slice(i, i + BATCH_SIZE).forEach(d => batch.delete(d.ref))
+                    const chunk = snap.docs.slice(i, i + BATCH_SIZE)
+                    chunk.forEach(d => batch.delete(d.ref))
                     await batch.commit()
+                    done += chunk.length
+                    setProgress({ done, total })
                 }
-                addLog('ok', `  ✅ ${colId}: ${snap.size} deleted`)
+
+                addLog('ok', `  ✅ ${col.label} — ${snap.size} deleted`)
             }
 
-            addLog('done', '🎉 Data cleared! Users & business settings preserved.')
+            addLog('done', `🎉 Delete complete! ${done} document(s) removed.`)
             setStatus('done')
         } catch (err) {
-            addLog('error', '❌ Clear failed: ' + err.message)
+            addLog('error', '❌ Delete failed: ' + err.message)
             setStatus('error')
         } finally {
             setRunning(false)
@@ -421,7 +436,7 @@ export default function Backup() {
         return (
             <Layout>
                 <div className="p-12 text-center">
-                    <div className="text-4xl mb-4">🔐</div>
+                    <div className="flex justify-center mb-4 text-gray-400"><Icon name="lock" className="w-10 h-10" /></div>
                     <h2 className="text-xl font-bold text-gray-800">Access Restricted</h2>
                     <p className="text-gray-500 mt-2">Only the Business Owner can perform backup or restore operations.</p>
                 </div>
@@ -443,7 +458,7 @@ export default function Backup() {
 
                 {/* Info banner */}
                 <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6 flex gap-3">
-                    <span className="text-lg flex-shrink-0">💡</span>
+                    <span className="flex-shrink-0 text-amber-500"><Icon name="bulb" className="w-5 h-5" /></span>
                     <div className="text-sm text-amber-800">
                         <strong>Best practice:</strong> Export a backup before importing new products, updating prices in bulk, or making major inventory changes.
                         Backups are downloaded to your computer — nothing is stored on any external server.
@@ -455,7 +470,7 @@ export default function Backup() {
                     {/* ── EXPORT ────────────────────────────────────────── */}
                     <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
                         <div className="bg-green-600 px-5 py-3">
-                            <h2 className="text-white font-bold text-sm uppercase tracking-widest">⬇️ Export Backup</h2>
+                            <h2 className="text-white font-bold text-sm uppercase tracking-widest flex items-center gap-2"><Icon name="download" className="w-4 h-4" /> Export Backup</h2>
                             <p className="text-green-100 text-xs mt-0.5">Download Firestore data as JSON</p>
                         </div>
                         <div className="p-5">
@@ -469,7 +484,7 @@ export default function Backup() {
                                             onChange={e => setExportCols(p => ({ ...p, [col.id]: e.target.checked }))}
                                             className="rounded accent-green-600 w-4 h-4"
                                         />
-                                        <span>{col.icon} {col.label}</span>
+                                        <span className="flex items-center gap-1.5"><Icon name={col.icon} className="w-4 h-4 text-gray-400" /> {col.label}</span>
                                     </label>
                                 ))}
                             </div>
@@ -493,9 +508,11 @@ export default function Backup() {
                             <button
                                 onClick={startExport}
                                 disabled={running}
-                                className="w-full py-2.5 rounded-xl bg-green-600 text-white text-sm font-semibold hover:bg-green-700 disabled:opacity-40 transition"
+                                className="w-full py-2.5 rounded-xl bg-green-600 text-white text-sm font-semibold hover:bg-green-700 disabled:opacity-40 transition flex items-center justify-center gap-2"
                             >
-                                {running ? '⏳ Exporting...' : '⬇️ Export Now'}
+                                {running
+                                    ? <><Icon name="spinner" className="w-4 h-4 animate-spin" /> Exporting...</>
+                                    : <><Icon name="download" className="w-4 h-4" /> Export Now</>}
                             </button>
                         </div>
                     </div>
@@ -503,14 +520,14 @@ export default function Backup() {
                     {/* ── IMPORT / RESTORE ──────────────────────────────── */}
                     <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
                         <div className="bg-blue-600 px-5 py-3">
-                            <h2 className="text-white font-bold text-sm uppercase tracking-widest">⬆️ Import / Restore</h2>
+                            <h2 className="text-white font-bold text-sm uppercase tracking-widest flex items-center gap-2"><Icon name="upload" className="w-4 h-4" /> Import / Restore</h2>
                             <p className="text-blue-100 text-xs mt-0.5">Restore from backup or import new data</p>
                         </div>
                         <div className="p-5">
 
                             {/* File drop */}
                             <label className={`flex flex-col items-center justify-center border-2 border-dashed rounded-xl p-6 cursor-pointer transition mb-4 ${importFile ? 'border-green-400 bg-green-50' : 'border-gray-300 hover:border-blue-400 hover:bg-blue-50'}`}>
-                                <span className="text-2xl mb-1">{importFile ? '✅' : '📂'}</span>
+                                <span className="mb-1">{importFile ? <Icon name="check" className="w-7 h-7 text-green-500" /> : <Icon name="folder" className="w-7 h-7 text-gray-400" />}</span>
                                 <span className="text-sm font-medium text-gray-600">
                                     {importFile ? importFile.name : 'Click to select backup JSON'}
                                 </span>
@@ -557,75 +574,77 @@ export default function Backup() {
                             <button
                                 onClick={startImport}
                                 disabled={running || !importData}
-                                className="w-full py-2.5 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 disabled:opacity-40 transition"
+                                className="w-full py-2.5 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 disabled:opacity-40 transition flex items-center justify-center gap-2"
                             >
-                                {running ? '⏳ Importing...' : '⬆️ Restore / Import'}
+                                {running
+                                    ? <><Icon name="spinner" className="w-4 h-4 animate-spin" /> Importing...</>
+                                    : <><Icon name="upload" className="w-4 h-4" /> Restore / Import</>}
                             </button>
                         </div>
                     </div>
                 </div>
 
-                {/* ── SEED DATA ────────────────────────────────────────── */}
-                <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm mb-6">
-                    <div className="bg-purple-600 px-5 py-3 flex items-center justify-between">
-                        <div>
-                            <h2 className="text-white font-bold text-sm uppercase tracking-widest">🧪 Seed Test Data</h2>
-                            <p className="text-purple-100 text-xs mt-0.5">Populate sample data for testing purposes</p>
-                        </div>
-                        <span className="bg-purple-500 text-white text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-tighter border border-purple-400">DEV ONLY</span>
-                    </div>
-                    <div className="p-5 flex flex-col md:flex-row items-center gap-5">
-                        <div className="flex-1">
-                            <p className="text-sm text-gray-600 leading-relaxed">
-                                Get started quickly by populating your business with <strong>10 fabric products</strong> (Lawn, Cotton, Silk, Denim, Linen, Velvet),
-                                6 categories, 5 customers (Pakistan + Thailand), 3 suppliers,
-                                and <strong>sample sales &amp; cash flow</strong> entries across all branches.
-                            </p>
-                        </div>
-                        <div className="w-full md:w-auto">
-                            <button
-                                onClick={startSeeding}
-                                disabled={running}
-                                className="w-full md:w-48 py-2.5 rounded-xl bg-purple-600 text-white text-sm font-semibold hover:bg-purple-700 disabled:opacity-40 transition shadow-sm"
-                            >
-                                {running ? '⏳ Seeding...' : '🧪 Seed Test Data'}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                {/* ── CLEAR DATA ───────────────────────────────────────── */}
+                {/* ── DELETE ───────────────────────────────────────────── */}
                 <div className="bg-white border border-red-200 rounded-xl overflow-hidden shadow-sm mb-6">
                     <div className="bg-red-600 px-5 py-3 flex items-center justify-between">
                         <div>
-                            <h2 className="text-white font-bold text-sm uppercase tracking-widest">🗑️ Clear All Data</h2>
-                            <p className="text-red-100 text-xs mt-0.5">Products, sales, inventory, customers — users will be kept</p>
+                            <h2 className="text-white font-bold text-sm uppercase tracking-widest flex items-center gap-2"><Icon name="trash" className="w-4 h-4" /> Delete Data</h2>
+                            <p className="text-red-100 text-xs mt-0.5">Permanently remove selected collections</p>
                         </div>
                         <span className="bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-tighter border border-red-400">DANGER</span>
                     </div>
-                    <div className="p-5 flex flex-col md:flex-row items-center gap-5">
-                        <div className="flex-1">
-                            <p className="text-sm text-gray-600 leading-relaxed">
-                                Sab dummy/test data delete karega — products, categories, customers, suppliers, barcodes, sales, inventory, expenses, cash flow.
-                                <strong className="text-red-600"> Users aur business settings nahi delete honge.</strong>
-                            </p>
+                    <div className="p-5">
+                        <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">Select Collections to Delete</p>
+                        <div className="grid grid-cols-2 gap-2 mb-5">
+                            {ALL_COLLECTIONS.map(col => (
+                                <label key={col.id} className="flex items-center gap-2 cursor-pointer text-sm text-gray-600 hover:text-gray-900 select-none">
+                                    <input
+                                        type="checkbox"
+                                        checked={!!deleteCols[col.id]}
+                                        onChange={e => setDeleteCols(p => ({ ...p, [col.id]: e.target.checked }))}
+                                        className="rounded accent-red-600 w-4 h-4"
+                                    />
+                                    <span className="flex items-center gap-1.5"><Icon name={col.icon} className="w-4 h-4 text-gray-400" /> {col.label}</span>
+                                </label>
+                            ))}
                         </div>
-                        <div className="w-full md:w-auto">
+
+                        {/* Select all / none */}
+                        <div className="flex gap-2 mb-4">
                             <button
-                                onClick={startClearData}
-                                disabled={running}
-                                className="w-full md:w-48 py-2.5 rounded-xl bg-red-600 text-white text-sm font-semibold hover:bg-red-700 disabled:opacity-40 transition shadow-sm"
+                                onClick={() => setDeleteCols(Object.fromEntries(ALL_COLLECTIONS.map(c => [c.id, true])))}
+                                className="text-xs px-3 py-1 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50"
                             >
-                                {running ? '⏳ Clearing...' : '🗑️ Clear All Data'}
+                                Select All
+                            </button>
+                            <button
+                                onClick={() => setDeleteCols(Object.fromEntries(ALL_COLLECTIONS.map(c => [c.id, false])))}
+                                className="text-xs px-3 py-1 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50"
+                            >
+                                None
                             </button>
                         </div>
+
+                        <p className="text-xs text-gray-500 mb-4">
+                            Scope: current business &amp; branch. <strong className="text-red-600">This cannot be undone</strong> — export a backup first.
+                        </p>
+
+                        <button
+                            onClick={startDelete}
+                            disabled={running}
+                            className="w-full py-2.5 rounded-xl bg-red-600 text-white text-sm font-semibold hover:bg-red-700 disabled:opacity-40 transition flex items-center justify-center gap-2"
+                        >
+                            {running
+                                ? <><Icon name="spinner" className="w-4 h-4 animate-spin" /> Deleting...</>
+                                : <><Icon name="trash" className="w-4 h-4" /> Delete Selected</>}
+                        </button>
                     </div>
                 </div>
 
                 {/* ── Export History ─────────────────────────────────── */}
                 {history.length > 0 && (
                     <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm mb-6">
-                        <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">📋 Session Export History</p>
+                        <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3 flex items-center gap-1.5"><Icon name="clipboardList" className="w-4 h-4" /> Session Export History</p>
                         <div className="divide-y divide-gray-100">
                             {history.map((item, i) => (
                                 <div key={i} className="flex items-center justify-between py-3">
@@ -637,9 +656,9 @@ export default function Backup() {
                                     </div>
                                     <button
                                         onClick={() => reDownload(item)}
-                                        className="text-xs px-3 py-1.5 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 font-medium transition"
+                                        className="text-xs px-3 py-1.5 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 font-medium transition flex items-center gap-1.5"
                                     >
-                                        ⬇️ Re-download
+                                        <Icon name="download" className="w-3.5 h-3.5" /> Re-download
                                     </button>
                                 </div>
                             ))}
