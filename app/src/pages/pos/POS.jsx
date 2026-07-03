@@ -413,7 +413,9 @@ function POS() {
                 taxLabel: settings?.taxLabel || 'Tax',
                 discount: redeemPoints ? redemptionValue : 0,
                 paymentMethod,
-                amountPaid: Number(amountPaid) || total,
+                // Credit sales are unpaid (or only partially paid) — never auto-fill to the full total,
+                // otherwise the balance owed (accounts receivable) is lost.
+                amountPaid: paymentMethod === 'credit' ? (Number(amountPaid) || 0) : (Number(amountPaid) || total),
                 change: Number(change) || 0,
                 cashierName: user?.name || auth.currentUser?.displayName || 'Unknown Staff',
                 cashierId: auth.currentUser?.uid,

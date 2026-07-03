@@ -123,6 +123,14 @@ function Sales() {
 
     const totalRevenue = sales.reduce((sum, s) => sum + (s.finalAmount || s.total || 0), 0)
 
+    // Outstanding credit (accounts receivable) = billed amount not yet collected, per sale.
+    // Legacy sales without amountPaid are assumed fully paid (no false receivable).
+    const outstandingOf = (s) => {
+        const billed = s.finalAmount || s.total || s.subtotal || 0
+        return Math.max(0, billed - (s.amountPaid ?? billed))
+    }
+    const totalOutstanding = sales.reduce((sum, s) => sum + outstandingOf(s), 0)
+
     // ── Interactive Table Logic ──────────────────────────────
     const handleSort = (col) => {
         if (sortCol === col) {
@@ -185,7 +193,7 @@ function Sales() {
         <Layout title="Sales History">
 
             {/* Stats */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8 mt-12">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8 mt-12">
                 <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-gray-800">
                     <p className="text-gray-500 dark:text-gray-400 text-xs font-black uppercase tracking-widest mb-1">Total Transactions</p>
                     <h3 className="text-3xl font-black text-gray-800 dark:text-gray-100">{sales.length}</h3>
@@ -195,6 +203,13 @@ function Sales() {
                     <h3 className="text-3xl font-black text-green-600 dark:text-green-400">
                         {currency} {totalRevenue.toFixed(2)}
                     </h3>
+                </div>
+                <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-gray-800">
+                    <p className="text-gray-500 dark:text-gray-400 text-xs font-black uppercase tracking-widest mb-1">Outstanding Credit</p>
+                    <h3 className={`text-3xl font-black ${totalOutstanding > 0 ? 'text-orange-600 dark:text-orange-400' : 'text-gray-800 dark:text-gray-100'}`}>
+                        {currency} {totalOutstanding.toFixed(2)}
+                    </h3>
+                    <p className="text-gray-400 dark:text-gray-500 text-[10px] font-bold mt-1 uppercase tracking-widest">Receivable · not yet collected</p>
                 </div>
                 <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-gray-800">
                     <p className="text-gray-500 dark:text-gray-400 text-xs font-black uppercase tracking-widest mb-1">Average Sale</p>
@@ -321,6 +336,9 @@ function Sales() {
                                             <td className="px-4 py-3">
                                                 <div className="flex flex-col">
                                                     <span className="font-black text-gray-900 dark:text-gray-100 text-sm">{sale.currency || 'PKR'} {(sale.finalAmount || sale.total || 0).toLocaleString()}</span>
+                                                    {outstandingOf(sale) > 0 && (
+                                                        <span className="text-[10px] text-orange-500 font-black uppercase">Due: {sale.currency || 'PKR'} {outstandingOf(sale).toLocaleString()}</span>
+                                                    )}
                                                     {sale.status === 'returned' && (
                                                         <span className="text-[10px] text-red-500 font-black uppercase">Returned</span>
                                                     )}
@@ -446,6 +464,12 @@ function Sales() {
                                     <span>Change Returned</span>
                                     <span>{selected.currency || 'PKR'} {(selected.change || 0).toFixed(2)}</span>
                                 </div>
+                                {outstandingOf(selected) > 0 && (
+                                    <div className="flex justify-between text-xs font-black text-orange-600 dark:text-orange-400 pt-1">
+                                        <span className="uppercase tracking-widest">Balance Due</span>
+                                        <span>{selected.currency || 'PKR'} {outstandingOf(selected).toFixed(2)}</span>
+                                    </div>
+                                )}
                             </div>
                         </div>
 
