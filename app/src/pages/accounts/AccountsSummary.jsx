@@ -4,32 +4,31 @@ import useAuthStore from '../../store/authStore-multi-branch'
 import FirestoreService from '../../firebase/firestore-multi-branch'
 
 function AccountsSummary() {
-    const { businessId, branchId } = useAuthStore()
+    const { businessId, branchId, currency: storeCurrency } = useAuthStore()
     const [sales, setSales] = useState([])
     const [expenses, setExpenses] = useState([])
     const [cashFlow, setCashFlow] = useState([])
-    const [settings, setSettings] = useState(null)
     const [loading, setLoading] = useState(true)
     const [period, setPeriod] = useState('month') // 'today', 'month', 'year'
 
-    // Business doc nests config under `settings` (see initializeBusiness); fall back gracefully
-    const currency = settings?.settings?.currency || settings?.currency || 'PKR'
+    // Branch-level currency (set in Settings > Business Info), synced into the
+    // auth store at login — NOT the business doc's settings.currency, which is
+    // only ever seeded once at business creation and never updated.
+    const currency = storeCurrency || 'PKR'
 
     useEffect(() => {
         const fetchData = async () => {
             if (!businessId || !branchId) return
             try {
-                const [salesSnap, expSnap, cashSnap, businessSnap] = await Promise.all([
+                const [salesSnap, expSnap, cashSnap] = await Promise.all([
                     FirestoreService.getSales(businessId, branchId),
                     FirestoreService.getExpenses(businessId, branchId),
-                    FirestoreService.getCashFlow(businessId, branchId),
-                    FirestoreService.getBusiness(businessId)
+                    FirestoreService.getCashFlow(businessId, branchId)
                 ])
 
                 setSales(salesSnap.docs.map(d => ({ id: d.id, ...d.data() })))
                 setExpenses(expSnap.docs.map(d => ({ id: d.id, ...d.data() })))
                 setCashFlow(cashSnap.docs.map(d => ({ id: d.id, ...d.data() })))
-                if (businessSnap.exists()) setSettings(businessSnap.data())
             } catch (err) {
                 console.error(err)
             } finally {

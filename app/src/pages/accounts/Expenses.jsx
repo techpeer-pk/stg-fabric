@@ -30,7 +30,7 @@ import FirestoreService from '../../firebase/firestore-multi-branch'
 import { handleError, showSuccess } from '../../utils/errorHandler'
 
 function Expenses() {
-    const { businessId, branchId } = useAuthStore()
+    const { businessId, branchId, currency: storeCurrency } = useAuthStore()
     const [expenses, setExpenses] = useState([])
     const [loading, setLoading] = useState(false)
     const [initialLoading, setInitialLoading] = useState(true)
@@ -38,10 +38,11 @@ function Expenses() {
     const [editingExpense, setEditingExpense] = useState(null)
     const [searchQuery, setSearchQuery] = useState('')
     const [selectedCategory, setSelectedCategory] = useState('All')
-    const [settings, setSettings] = useState(null)
 
-    // Business doc nests config under `settings` (see initializeBusiness)
-    const currency = settings?.settings?.currency || settings?.currency || 'PKR'
+    // Branch-level currency (set in Settings > Business Info), synced into the
+    // auth store at login — NOT the business doc's settings.currency, which is
+    // only ever seeded once at business creation and never updated.
+    const currency = storeCurrency || 'PKR'
 
     const [form, setForm] = useState({
         title: '',
@@ -55,12 +56,8 @@ function Expenses() {
     const fetchExpenses = async () => {
         if (!businessId || !branchId) return
         try {
-            const [snapshot, businessSnap] = await Promise.all([
-                FirestoreService.getExpenses(businessId, branchId),
-                FirestoreService.getBusiness(businessId)
-            ])
+            const snapshot = await FirestoreService.getExpenses(businessId, branchId)
             setExpenses(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })))
-            if (businessSnap.exists()) setSettings(businessSnap.data())
         } catch (err) {
             handleError(err, 'Fetch Expenses', 'Failed to load expense records')
         }

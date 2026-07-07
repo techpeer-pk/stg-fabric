@@ -20,15 +20,16 @@ import FirestoreService from '../../firebase/firestore-multi-branch'
 import { handleError, showSuccess } from '../../utils/errorHandler'
 
 function CashFlow() {
-    const { businessId, branchId } = useAuthStore()
+    const { businessId, branchId, currency: storeCurrency } = useAuthStore()
     const [movements, setMovements] = useState([])
     const [loading, setLoading] = useState(false)
     const [initialLoading, setInitialLoading] = useState(true)
     const [showForm, setShowForm] = useState(false)
     const [type, setType] = useState('in') // 'in' or 'out'
-    const [settings, setSettings] = useState(null)
-    // Business doc nests config under `settings` (see initializeBusiness)
-    const currency = settings?.settings?.currency || settings?.currency || 'PKR'
+    // Branch-level currency (set in Settings > Business Info), synced into the
+    // auth store at login — NOT the business doc's settings.currency, which is
+    // only ever seeded once at business creation and never updated.
+    const currency = storeCurrency || 'PKR'
 
     const [form, setForm] = useState({
         amount: '',
@@ -41,12 +42,7 @@ function CashFlow() {
     const fetchMovements = async () => {
         if (!businessId || !branchId) return
         try {
-            const [movementsSnap, businessSnap] = await Promise.all([
-                FirestoreService.getCashFlow(businessId, branchId),
-                FirestoreService.getBusiness(businessId)
-            ])
-
-            if (businessSnap.exists()) setSettings(businessSnap.data())
+            const movementsSnap = await FirestoreService.getCashFlow(businessId, branchId)
             setMovements(movementsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })))
         } catch (err) {
             handleError(err, 'Fetch Cash Flow', 'Failed to load cash flow records')

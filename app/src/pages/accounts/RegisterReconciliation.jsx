@@ -18,26 +18,23 @@ import useAuthStore from '../../store/authStore-multi-branch'
 import FirestoreService from '../../firebase/firestore-multi-branch'
 
 function RegisterReconciliation() {
-    const { businessId, branchId } = useAuthStore()
+    const { businessId, branchId, currency: storeCurrency } = useAuthStore()
     const [cashFlow, setCashFlow] = useState([])
     const [loading, setLoading] = useState(true)
     const [submitting, setSubmitting] = useState(false)
-    const [settings, setSettings] = useState(null)
     const [actualCash, setActualCash] = useState('')
     const [notes, setNotes] = useState('')
     const [lastReconciliation, setLastReconciliation] = useState(null)
 
-    // Business doc nests config under `settings` (see initializeBusiness)
-    const currency = settings?.settings?.currency || settings?.currency || 'PKR'
+    // Branch-level currency (set in Settings > Business Info), synced into the
+    // auth store at login — NOT the business doc's settings.currency, which is
+    // only ever seeded once at business creation and never updated.
+    const currency = storeCurrency || 'PKR'
 
     useEffect(() => {
         const fetchData = async () => {
             if (!businessId || !branchId) return
             try {
-                // Fetch business settings
-                const businessSnap = await FirestoreService.getBusiness(businessId)
-                if (businessSnap.exists()) setSettings(businessSnap.data())
-
                 // Fetch last reconciliation
                 const lastRecSnap = await FirestoreService.getReconciliations(businessId, branchId)
 
