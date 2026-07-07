@@ -479,6 +479,18 @@ export const deleteBranch = (businessId, branchId) => {
     return deleteDoc(doc(db, `businesses/${businessId}/branches/${branchId}`))
 }
 
+// ── Platform Admin (billing kill switch) ────────────────────────────────────
+// Enforcement lives in firestore.rules (isPlatformAdmin/businessActive); these
+// just wrap the calls the hidden /billing-status page makes.
+
+export const getAllBusinesses = () => {
+    return getDocs(collection(db, 'businesses'))
+}
+
+export const updateBusinessStatus = (businessId, active, statusMessage = '') => {
+    return updateDoc(doc(db, 'businesses', businessId), { active, statusMessage })
+}
+
 // ============================================
 // BATCH OPERATIONS
 // ============================================
@@ -695,6 +707,12 @@ export const getUserSessionContext = async (userId) => {
         const businessDoc = await getDoc(doc(db, 'businesses', businessId))
         if (!businessDoc.exists()) return null
 
+        // Kill switch: short-circuit before touching any business-scoped collection
+        // (those are Firestore-rule-gated on this same flag — see firestore.rules)
+        if (businessDoc.data().active === false) {
+            return { businessId, disabled: true, statusMessage: businessDoc.data().statusMessage || '' }
+        }
+
         // 4. Get User Profile and apply OWNER SAFETY NET
         const profileSnap = await getDoc(doc(db, 'business_users', businessId, userId, 'profile'))
 
@@ -819,6 +837,8 @@ const service = {
     addExpense, getExpenses, updateExpense, deleteExpense,
     // Business & Branch
     getBusiness, updateBusiness, getBranches, addBranch, updateBranch, getBranch, deleteBranch,
+    // Platform Admin (billing kill switch)
+    getAllBusinesses, updateBusinessStatus,
     // Batch Operations
     batchAddInventoryItems, batchUpdateSalesWithCashFlow,
     // Aggregation

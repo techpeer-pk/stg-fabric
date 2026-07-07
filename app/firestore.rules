@@ -32,6 +32,16 @@ service cloud.firestore {
       return isMember(businessId) && memberProfile(businessId).role in ['owner', 'manager', 'cashier'];
     }
 
+    // Platform operator — the only identity allowed to enable/disable a client's access
+    function isPlatformAdmin() {
+      return isAuth() && request.auth.token.email == 'techpeer.pk@gmail.com';
+    }
+
+    // Billing kill switch — missing field defaults to active (no migration needed)
+    function businessActive(businessId) {
+      return get(/databases/$(database)/documents/businesses/$(businessId)).data.active != false;
+    }
+
     // ─── Global User Mapping ──────────────────────────────────────────────────
     // users/{uid} — login pe businessId fetch karne ke liye
     match /users/{userId} {
@@ -55,16 +65,19 @@ service cloud.firestore {
 
     // ─── Business Membership ──────────────────────────────────────────────────
     match /business_users/{businessId}/{userId}/profile {
-      allow read: if isAuth() && (request.auth.uid == userId || isMember(businessId));
-      allow create: if isAuth() && (request.auth.uid == userId || isAdmin(businessId));
-      allow update, delete: if isAdmin(businessId);
+      allow read: if isAuth() && (request.auth.uid == userId || isMember(businessId)) && businessActive(businessId);
+      allow create: if isAuth() && (request.auth.uid == userId || isAdmin(businessId)) && businessActive(businessId);
+      allow update, delete: if isAdmin(businessId) && businessActive(businessId);
     }
 
     // ─── Business Settings ────────────────────────────────────────────────────
     match /businesses/{businessId} {
       allow read: if true; // public — needed for QR invoice verify
       allow create: if isAuth() && request.resource.data.owner_uid == request.auth.uid;
-      allow update: if isAdmin(businessId);
+      // Platform admin can always update (incl. the `active` kill switch); a business
+      // owner can edit their own info only while active, and can never touch `active` themselves.
+      allow update: if isPlatformAdmin() ||
+        (isAdmin(businessId) && businessActive(businessId) && request.resource.data.active == resource.data.active);
       allow delete: if false;
     }
 
@@ -72,50 +85,50 @@ service cloud.firestore {
     // Admin creates/edits branches; everyone can read
     match /businesses/{businessId}/branches/{branchId} {
       allow read: if true; // public — needed for QR invoice verify (currency/settings)
-      allow write: if isAdmin(businessId);
+      allow write: if isAdmin(businessId) && businessActive(businessId);
     }
 
     // ─── Products ────────────────────────────────────────────────────────────
     // Cashier: read only (for POS display)
     // Manager+: full access
     match /businesses/{businessId}/products/{doc} {
-      allow read: if isMember(businessId);
-      allow write: if isManager(businessId);
+      allow read: if isMember(businessId) && businessActive(businessId);
+      allow write: if isManager(businessId) && businessActive(businessId);
     }
 
     // ─── Categories ──────────────────────────────────────────────────────────
     match /businesses/{businessId}/categories/{doc} {
-      allow read: if isMember(businessId);
-      allow write: if isManager(businessId);
+      allow read: if isMember(businessId) && businessActive(businessId);
+      allow write: if isManager(businessId) && businessActive(businessId);
     }
 
     // ─── Suppliers ───────────────────────────────────────────────────────────
     // Cashier: no access
     match /businesses/{businessId}/suppliers/{doc} {
-      allow read, write: if isManager(businessId);
+      allow read, write: if isManager(businessId) && businessActive(businessId);
     }
 
     // ─── Customers ───────────────────────────────────────────────────────────
     // Cashier: can add/edit customers at POS; cannot delete
     match /businesses/{businessId}/customers/{doc} {
-      allow read: if isMember(businessId);
-      allow create, update: if isCashier(businessId);
-      allow delete: if isManager(businessId);
+      allow read: if isMember(businessId) && businessActive(businessId);
+      allow create, update: if isCashier(businessId) && businessActive(businessId);
+      allow delete: if isManager(businessId) && businessActive(businessId);
     }
 
     // ─── Barcodes ────────────────────────────────────────────────────────────
     // Cashier: read only (for POS scanning)
     // Manager+: generate, delete
     match /businesses/{businessId}/barcodes/{doc} {
-      allow read: if isMember(businessId);
-      allow write: if isManager(businessId);
+      allow read: if isMember(businessId) && businessActive(businessId);
+      allow write: if isManager(businessId) && businessActive(businessId);
     }
 
     // ─── Inventory ───────────────────────────────────────────────────────────
     // Cashier: read + write (POS sale decrements stock)
     match /businesses/{businessId}/branches/{branchId}/inventory/{doc} {
-      allow read: if isMember(businessId);
-      allow write: if isCashier(businessId);
+      allow read: if isMember(businessId) && businessActive(businessId);
+      allow write: if isCashier(businessId) && businessActive(businessId);
     }
 
     // ─── Sales ───────────────────────────────────────────────────────────────
@@ -124,41 +137,41 @@ service cloud.firestore {
     // Public: read individual sale for QR invoice verify (anyone with the exact saleId)
     match /businesses/{businessId}/branches/{branchId}/sales/{doc} {
       allow read: if true; // public — QR invoice verify (anyone with exact saleId)
-      allow create: if isCashier(businessId);
-      allow update, delete: if isManager(businessId);
+      allow create: if isCashier(businessId) && businessActive(businessId);
+      allow update, delete: if isManager(businessId) && businessActive(businessId);
     }
 
     // ─── Sales Returns ───────────────────────────────────────────────────────
     // Manager+ only (cashier cannot process returns)
     match /businesses/{businessId}/branches/{branchId}/sales_returns/{doc} {
-      allow read, write: if isManager(businessId);
+      allow read, write: if isManager(businessId) && businessActive(businessId);
     }
 
     // ─── Suspended Sales (Hold) ───────────────────────────────────────────────
     // Cashier can put on hold and resume
     match /businesses/{businessId}/branches/{branchId}/suspended_sales/{doc} {
-      allow read, write: if isCashier(businessId);
+      allow read, write: if isCashier(businessId) && businessActive(businessId);
     }
 
     // ─── Purchase Orders ─────────────────────────────────────────────────────
     // Manager+ only
     match /businesses/{businessId}/branches/{branchId}/purchase_orders/{doc} {
-      allow read, write: if isManager(businessId);
+      allow read, write: if isManager(businessId) && businessActive(businessId);
     }
 
     // ─── Expenses ────────────────────────────────────────────────────────────
     match /businesses/{businessId}/branches/{branchId}/expenses/{doc} {
-      allow read, write: if isManager(businessId);
+      allow read, write: if isManager(businessId) && businessActive(businessId);
     }
 
     // ─── Cash Flow ───────────────────────────────────────────────────────────
     match /businesses/{businessId}/branches/{branchId}/cash_flow/{doc} {
-      allow read, write: if isManager(businessId);
+      allow read, write: if isManager(businessId) && businessActive(businessId);
     }
 
     // ─── Register Reconciliation ──────────────────────────────────────────────
     match /businesses/{businessId}/branches/{branchId}/reconciliations/{doc} {
-      allow read, write: if isManager(businessId);
+      allow read, write: if isManager(businessId) && businessActive(businessId);
     }
   }
 }

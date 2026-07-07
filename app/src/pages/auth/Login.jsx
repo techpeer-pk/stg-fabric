@@ -76,10 +76,24 @@ function Login() {
 
             // Step 4: Get business & branches context (Session Context)
             let context = await getUserSessionContext(user.uid)
-            
+
             if (!context) {
                 setError('Failed to load business context. Please contact support.')
                 setLoading(false)
+                return
+            }
+
+            if (context.disabled) {
+                useAuthStore.setState({
+                    user,
+                    userId: user.uid,
+                    userEmail: user.email,
+                    businessId: context.businessId,
+                    isAuthenticated: true,
+                    businessDisabled: true,
+                    businessDisabledMessage: context.statusMessage || ''
+                })
+                navigate('/service-unavailable')
                 return
             }
 

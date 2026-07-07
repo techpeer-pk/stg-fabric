@@ -3,7 +3,7 @@ import useAuthStore from '../store/authStore-multi-branch'
 import AppPreloader from '../components/common/AppPreloader'
 
 function ProtectedRoute({ children, allowedRoles }) {
-    const { user, loading, userRole } = useAuthStore()
+    const { user, loading, userRole, businessDisabled } = useAuthStore()
 
     if (loading) return (
         <div className="min-h-screen bg-gray-200 dark:bg-gray-950 flex flex-col items-center justify-center fixed inset-0 z-[9999]">
@@ -14,6 +14,10 @@ function ProtectedRoute({ children, allowedRoles }) {
 
     if (!user) {
         return <Navigate to="/login" />
+    }
+
+    if (businessDisabled) {
+        return <Navigate to="/service-unavailable" />
     }
 
     if (allowedRoles && !allowedRoles.includes(userRole)) {

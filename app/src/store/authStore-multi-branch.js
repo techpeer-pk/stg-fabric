@@ -23,6 +23,8 @@ const useAuthStore = create(
             branchName: '',
             branchLocation: '',
             currency: 'PKR',
+            businessDisabled: false, // set by App.jsx's session check; not persisted — always re-derived fresh
+            businessDisabledMessage: '', // optional custom text set via /billing-status; not persisted
             
             // User's Available Branches
             assignedBranches: [], // [{ branchId, branchName, role }, ...]

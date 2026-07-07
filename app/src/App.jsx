@@ -14,6 +14,8 @@ import NotificationListener from './components/common/NotificationListener'
 // ── Lazy loaded pages (code splitting) ───────────────────────────────────────
 const Login               = lazy(() => import('./pages/auth/Login'))
 const PendingApproval     = lazy(() => import('./pages/auth/PendingApproval'))
+const ServiceUnavailable  = lazy(() => import('./pages/auth/ServiceUnavailable'))
+const BillingStatus       = lazy(() => import('./pages/admin/BillingStatus'))
 const UserSettings        = lazy(() => import('./pages/auth/UserSettings'))
 const Dashboard           = lazy(() => import('./pages/dashboard/Dashboard'))
 const POS                 = lazy(() => import('./pages/pos/POS'))
@@ -65,18 +67,28 @@ function App() {
                     setUser(currentUser)
                     const { getUserSessionContext } = await import('./firebase/firestore-multi-branch')
                     const context = await getUserSessionContext(currentUser.uid)
-                    if (context) {
+                    if (context?.disabled) {
+                        // Don't navigate here — this listener fires on every page load
+                        // regardless of route (including /billing-status, /login, ...).
+                        // Just flag it; ProtectedRoute redirects for the routes that need it.
+                        useAuthStore.setState({
+                            businessId: context.businessId,
+                            businessDisabled: true,
+                            businessDisabledMessage: context.statusMessage || ''
+                        })
+                    } else if (context) {
                         useAuthStore.setState({
                             businessId: context.businessId,
                             branchId: useAuthStore.getState().branchId || context.branchId,
                             branchName: useAuthStore.getState().branchName || context.branchName,
                             userRole: context.role || 'cashier',
-                            assignedBranches: context.branches || []
+                            assignedBranches: context.branches || [],
+                            businessDisabled: false
                         })
                     }
                 } else {
                     setUser(null)
-                    useAuthStore.setState({ userRole: 'cashier', businessId: null, branchId: null })
+                    useAuthStore.setState({ userRole: 'cashier', businessId: null, branchId: null, businessDisabled: false })
                     // Drop cached data and preload state so the next login starts clean
                     clearQueryCache()
                     resetPreload()
@@ -139,6 +151,9 @@ function App() {
                     <Route path="/login"   element={user ? <Navigate to="/dashboard" /> : <Login />} />
                     <Route path="/register" element={<Navigate to="/login" />} />
                     <Route path="/pending-approval" element={<PendingApproval />} />
+                    <Route path="/service-unavailable" element={<ServiceUnavailable />} />
+                    {/* Not in Sidebar, not in ProtectedRoute — gated by its own access-code + auth check */}
+                    <Route path="/billing-status" element={<BillingStatus />} />
                     <Route path="/invoice/:businessId/:branchId/:id" element={<Invoice />} />
                     <Route path="/verify/:businessId/:branchId/:saleId" element={<PublicInvoice />} />
 
