@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
 import { doc, getDoc } from 'firebase/firestore'
 import { db } from '../../firebase/config'
+import { formatUnit } from '../../utils/units'
 import { CheckCircle, XCircle, Loader } from 'lucide-react'
 
 const getInvoiceNo = (id) => {
@@ -136,7 +137,7 @@ export default function PublicInvoice() {
                                     <td className="py-2 text-gray-400">{i + 1}</td>
                                     <td className="py-2 font-semibold text-gray-700">{item.name}</td>
                                     <td className="py-2 text-center text-gray-500">
-                                        {item.quantity} {item.unit || ''}
+                                        {item.quantity} {formatUnit(item.unit)}
                                     </td>
                                     <td className="py-2 text-right text-gray-500">{currency} {Number(item.price).toFixed(2)}</td>
                                     <td className="py-2 text-right font-bold text-gray-700">

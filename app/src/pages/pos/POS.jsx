@@ -405,6 +405,7 @@ function POS() {
                     price: item.price,
                     costPrice: item.costPrice || 0,
                     quantity: item.quantity,
+                    unit: item.unit || 'pcs',
                     total: item.price * item.quantity
                 })),
                 subtotal, tax, 

@@ -4,6 +4,7 @@ import { handleError } from '../../utils/errorHandler'
 import { QRCodeCanvas } from 'qrcode.react'
 import useAuthStore from '../../store/authStore-multi-branch'
 import FirestoreService from '../../firebase/firestore-multi-branch'
+import { formatUnit } from '../../utils/units'
 // html2canvas + jsPDF loaded dynamically on demand (heavy libs ~600KB)
 import { ArrowLeft, Printer, FileDown, Share2, Phone, Mail, Factory } from 'lucide-react'
 
@@ -319,7 +320,7 @@ function Invoice() {
                                         </td>
                                         <td className="px-4 py-3 text-center">
                                             <span className="font-bold text-gray-700">{item.quantity}</span>
-                                            <span className="text-gray-400 text-xs ml-1">{item.unit || 'mtrs'}</span>
+                                            <span className="text-gray-400 text-xs ml-1">{formatUnit(item.unit)}</span>
                                         </td>
                                         <td className="px-4 py-3 text-right text-gray-600 font-medium">
                                             {currency} {(item.price || 0).toFixed(2)}
