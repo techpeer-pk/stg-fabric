@@ -6,6 +6,8 @@ import ProtectedRoute from './routes/ProtectedRoute'
 import useAuthStore from './store/authStore-multi-branch'
 import useThemeStore from './store/themeStore'
 import { onMessageListener } from './firebase/messaging'
+import { clearQueryCache } from './firebase/queryCache'
+import { resetPreload } from './utils/appPreloader'
 import toast, { Toaster } from 'react-hot-toast'
 import NotificationListener from './components/common/NotificationListener'
 
@@ -43,7 +45,7 @@ const PublicInvoice       = lazy(() => import('./pages/public/PublicInvoice'))
 
 // ── Page loader (shown while lazy chunk loads) ────────────────────────────────
 const PageLoader = () => (
-    <div className="min-h-screen bg-white dark:bg-gray-950 flex items-center justify-center">
+    <div className="min-h-screen bg-gray-200 dark:bg-gray-950 flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
             <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-600" />
             <p className="text-gray-400 text-xs font-semibold tracking-widest uppercase">Loading...</p>
@@ -75,6 +77,9 @@ function App() {
                 } else {
                     setUser(null)
                     useAuthStore.setState({ userRole: 'cashier', businessId: null, branchId: null })
+                    // Drop cached data and preload state so the next login starts clean
+                    clearQueryCache()
+                    resetPreload()
                 }
             } catch (error) {
                 console.error('Session sync error:', error)
@@ -113,7 +118,7 @@ function App() {
 
     if (loading) {
         return (
-            <div className="min-h-screen bg-white flex flex-col items-center justify-center">
+            <div className="min-h-screen bg-gray-200 dark:bg-gray-950 flex flex-col items-center justify-center">
                 <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-blue-600 mb-3" />
                 <p className="text-gray-400 text-sm font-medium">Fabric POS Loading...</p>
             </div>
@@ -127,7 +132,7 @@ function App() {
             <Suspense fallback={<PageLoader />}>
                 <Routes>
                     {/* Public */}
-                    <Route path="/"        element={<PublicDocumentation />} />
+                    <Route path="/"        element={<Navigate to="/login" replace />} />
                     <Route path="/docs"    element={<PublicDocumentation />} />
                     <Route path="/pricing" element={<Pricing />} />
                     <Route path="/purpose" element={<Purpose />} />

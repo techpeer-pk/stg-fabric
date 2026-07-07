@@ -1,4 +1,5 @@
 import { db } from './config'
+import { cachedRead, invalidating } from './queryCache'
 import {
     collection,
     collectionGroup,
@@ -749,15 +750,17 @@ export const getUserSessionContext = async (userId) => {
  */
 // ── Barcodes (Fabric Tracking) ────────────────────────────────────────────────
 
-export const addBarcode = (businessId, data) => {
+// Wrapped at definition because pages import these by name (see Barcode.jsx),
+// bypassing the cached default export below.
+export const addBarcode = invalidating((businessId, data) => {
     const ref = collection(db, `businesses/${businessId}/barcodes`)
     return addDoc(ref, data)
-}
+})
 
-export const getBarcodes = (businessId) => {
+export const getBarcodes = cachedRead('getBarcodes', (businessId) => {
     const ref = collection(db, `businesses/${businessId}/barcodes`)
     return getDocs(query(ref, orderBy('createdAt', 'desc')))
-}
+})
 
 export const getBarcodeByCode = async (businessId, barcodeId) => {
     const ref = collection(db, `businesses/${businessId}/barcodes`)
@@ -765,15 +768,15 @@ export const getBarcodeByCode = async (businessId, barcodeId) => {
     return getDocs(q)
 }
 
-export const updateBarcode = (businessId, docId, data) => {
+export const updateBarcode = invalidating((businessId, docId, data) => {
     const ref = doc(db, `businesses/${businessId}/barcodes`, docId)
     return updateDoc(ref, data)
-}
+})
 
-export const deleteBarcode = (businessId, docId) => {
+export const deleteBarcode = invalidating((businessId, docId) => {
     const ref = doc(db, `businesses/${businessId}/barcodes`, docId)
     return deleteDoc(ref)
-}
+})
 
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -789,7 +792,7 @@ export const saveUserFcmToken = async (businessId, userId, token) => {
     }
 }
 
-export default {
+const service = {
     // Products
     addProduct, getProducts, getProductById, updateProduct, deleteProduct, deleteProductCascade,
     // Inventory
@@ -827,3 +830,27 @@ export default {
     // Barcodes (Fabric Tracking)
     addBarcode, getBarcodes, getBarcodeByCode, updateBarcode,
 }
+
+// ── Read-through cache wiring ────────────────────────────────────────────────
+// List-level reads are cached (warmed by the post-login preloader) so every
+// segment opens instantly; any mutation clears the cache so the next read
+// refetches fresh data. Item-level reads (getSale, getInventoryByProduct, …)
+// stay uncached — they must always be live (e.g. stock checks during a sale).
+const CACHED_READS = new Set([
+    'getProducts', 'getInventory', 'getCategories', 'getCustomers', 'getSuppliers',
+    'getSales', 'getSuspendedSales', 'getCashFlow', 'getReconciliations',
+    'getStockTransfers', 'getPurchaseOrders', 'getExpenses',
+    'getBusiness', 'getBranch', 'getBranches', 'getBarcodes'
+])
+// 'saveUserFcmToken' is deliberately NOT a mutation here — it only writes the
+// user's profile doc (never cached) and runs right after login, when clearing
+// the cache would throw away everything the preloader just warmed.
+const MUTATION_RE = /^(add|update|delete|create|increment|decrement|batch|initialize)/
+
+for (const [name, fn] of Object.entries(service)) {
+    if (fn.__cacheWrapped) continue
+    if (CACHED_READS.has(name)) service[name] = cachedRead(name, fn)
+    else if (MUTATION_RE.test(name)) service[name] = invalidating(fn)
+}
+
+export default service
